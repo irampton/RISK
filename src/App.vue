@@ -345,7 +345,7 @@ export default {
                   if ( typeof tID === "string" ) {
                     if ( tID === 'done' ) {
                       this.playerAttack.done = true;
-                    } else if ( this.playerAttack.from && this.playerAttack.to ) {
+                    } else if ( this.playerAttack.from !== null  && this.playerAttack.to !== null ) {
                       this.playerAttack.rounds = tID === 'attackInf' ? -1 : 1;
                     }
                   } else if ( tID === null ) {
