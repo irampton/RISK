@@ -31,7 +31,7 @@
       </div>
     </div>
     <div style="text-align: center; width: 66%">
-      <canvas id="gameCanvas" width="800" height="500"></canvas>
+      <canvas id="gameCanvas" width="968" height="656"></canvas>
       <br>
       <div style="display: flex; flex-direction: row; width: 100%; justify-content: space-between">
         <div style="width: 20%; padding-left: 50px">
@@ -325,8 +325,8 @@ export default {
                     turnStats.territoriesWon++;
                     this.playerAttack.to = null;
                   }
-                  this.playerAttack.rounds = null;
                 }
+                this.playerAttack.rounds = null;
                 this.drawMap();
               } while ( !this.playerAttack.done )
               this.addToGameLog( this.currentTeam, `will end their turn conquering ${ turnStats.territoriesWon } territories, killing ${ turnStats.troopsKilled } troops, and loosing ${ turnStats.troopsLost } troops` );
