@@ -289,8 +289,9 @@ export default {
                   if ( typeof tID === "string" ) {
                     if ( tID === 'done' ) {
                       this.playerAttack.done = true;
+                    } else if ( this.playerAttack.from && this.playerAttack.to ) {
+                      this.playerAttack.rounds = tID === 'attackInf' ? -1 : 1;
                     }
-                    this.playerAttack.rounds = tID === 'attackInf' ? -1 : 1;
                   } else if ( tID === null ) {
                     //clicked nowhere, clear
                     this.playerAttack.from = null;
