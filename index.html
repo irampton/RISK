@@ -1,45 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="">
+  <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<h1 style="text-align: center">RISK</h1>
-<div style="display: flex; flex-direction: row">
-    <div style="width: 33%">
-        <div class="log" id="gameLog">
-        </div>
-    </div>
-    <div style="text-align: center; width: 66%">
-        <canvas id="gameCanvas" width="800" height="500"></canvas>
-        <br>
-        <button onclick="nextTurn()">Next Turn</button>
-        <br>
-        <br>
-    </div>
-</div>
-
-
-<script src="AI.js"></script>
-<script src="territories.js"></script>
-<script src="index.js">
-</script>
-</body>
-<style>
-    canvas {
-        display: block;
-        margin: auto;
-        border: 1px solid black;
-    }
-
-    .log {
-        height: 80vh;
-        overflow-y: scroll;
-        margin: .5rem;
-        text-align: left;
-        border: black thin solid;
-        padding: .5rem;
-    }
-</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

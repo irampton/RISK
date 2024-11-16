@@ -1,4 +1,10 @@
-function AI_placeTroop( gameStateTerritories, territories, teamId, personality ) {
+export const AI = {
+    placeTroop,
+    attack,
+    moveTroops
+};
+
+function placeTroop( gameStateTerritories, territories, teamId, personality ) {
     const { aggressive, cling } = personality;
 
     // Get all territories owned by the AI
@@ -16,13 +22,13 @@ function AI_placeTroop( gameStateTerritories, territories, teamId, personality )
         } );
 
         // Score calculation
-        const defensiveWeight = (1 - cling) * enemyNeighbors.length; // Defensive priority
-        const aggressiveWeight = aggressive * (territory.troops || 1); // Offensive priority
-        const troopPenalty = 1 / (territory.troops + 1); // Reduces score as troops increase
+        const defensiveWeight = ( 1 - cling ) * enemyNeighbors.length; // Defensive priority
+        const aggressiveWeight = aggressive * ( territory.troops || 1 ); // Offensive priority
+        const troopPenalty = 1 / ( territory.troops + 1 ); // Reduces score as troops increase
 
         return {
             id: territory.id,
-            score: (defensiveWeight + aggressiveWeight) * (troopPenalty / 2)
+            score: ( defensiveWeight + aggressiveWeight ) * ( troopPenalty / 2 )
         };
     } );
 
@@ -38,7 +44,7 @@ function AI_placeTroop( gameStateTerritories, territories, teamId, personality )
     }
 }
 
-function AI_attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
+function attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
     const { aggressive, cling } = personality;
 
     // Helper function to check if a territory helps the AI control a continent
@@ -76,11 +82,11 @@ function AI_attack( gameStateTerritories, territories, teamId, personality, turn
                 // Calculate attack desirability
                 const troopDifference = attacker.troops - target.troops;
                 const offensiveScore = aggressive * troopDifference; // Favor attacking weaker enemies
-                const defensiveRisk = (1 - cling) * target.troops; // Consider potential losses
-                const priorAggressionPenalty = turnStats.territoriesWon * (1 - aggressive); // Penalize attacking after many wins
-                const consolidationBonus = isContinentTarget( targetId ) ? (4 * aggressive) : 0; // Bonus for capturing a continent
-                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId ) * (aggressive + .2); // Bonus for territories connected to more owned ones
-                const gapBonus = troopDifference >= 8 ? (8 * Math.min( 1, aggressive * +.33 )) : 0;
+                const defensiveRisk = ( 1 - cling ) * target.troops; // Consider potential losses
+                const priorAggressionPenalty = turnStats.territoriesWon * ( 1 - aggressive ); // Penalize attacking after many wins
+                const consolidationBonus = isContinentTarget( targetId ) ? ( 4 * aggressive ) : 0; // Bonus for capturing a continent
+                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId ) * ( aggressive + .2 ); // Bonus for territories connected to more owned ones
+                const gapBonus = troopDifference >= 8 ? ( 8 * Math.min( 1, aggressive * +.33 ) ) : 0;
 
                 // Adjust desirability with the consolidation and connection bonuses
                 const desirability = offensiveScore - defensiveRisk - priorAggressionPenalty + consolidationBonus + connectedOwnedBonus + gapBonus;
@@ -108,7 +114,7 @@ function AI_attack( gameStateTerritories, territories, teamId, personality, turn
     }
 
     // Determine number of troops to commit based on troop difference and aggressiveness
-    const baseTroops = Math.max( 1, Math.floor( bestAttack.troopDifference * (aggressive + .5) ) );
+    const baseTroops = Math.max( 1, Math.floor( bestAttack.troopDifference * ( aggressive + .5 ) ) );
     const troopsToUse = Math.min( baseTroops, bestAttack.attackerTroops - 1 ); // Always leave 1 troop behind
 
     // Decide attempts based on aggressiveness, make AI more likely to attack
@@ -124,7 +130,7 @@ function AI_attack( gameStateTerritories, territories, teamId, personality, turn
 }
 
 
-function AI_moveTroops( gameStateTerritories, territories, teamId, personality ) {
+function moveTroops( gameStateTerritories, territories, teamId, personality ) {
     const { aggressive, cling } = personality;
 
     // Helper function to check for an unbroken line of connected territories
@@ -185,7 +191,7 @@ function AI_moveTroops( gameStateTerritories, territories, teamId, personality )
 
             if ( priority > 0 ) {
                 // Move troops to a target with defensive needs, but don't send all troops
-                const troopsToMove = Math.max( 1, Math.floor( (source.troops - 1) * 0.5 ) ); // Move half of surplus, but at least 1 troop
+                const troopsToMove = Math.max( 1, Math.floor( ( source.troops - 1 ) * 0.5 ) ); // Move half of surplus, but at least 1 troop
                 if ( troopsToMove > 0 ) {
                     // Update troop counts directly in gameStateTerritories
                     const sourceTerritory = gameStateTerritories.find( t => t.id === source.id );
@@ -201,5 +207,3 @@ function AI_moveTroops( gameStateTerritories, territories, teamId, personality )
         } );
     } );
 }
-
-
