@@ -101,54 +101,49 @@ import {
 } from "@/scripts/territories.js"
 
 const AI_personalities = {
-    "Red": {
-        "aggressive": normalRandom( .75, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Orange": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Yellow": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Green": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Teal": {
-        "aggressive": normalRandom( .6, .1 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Blue": {
-        "aggressive": normalRandom( .3, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Purple": {
-        "aggressive": normalRandom( .75, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Pink": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "White": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Grey": {
-        "aggressive": normalRandom( .5, .15 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Black": {
-        "aggressive": normalRandom( .6, .1 ),
-        "cling": normalRandom( .15, .1 )
-    },
-    "Brown": {
-        "aggressive": normalRandom( .3, .15 ),
-        "cling": normalRandom( .15, .1 )
-    }
+  "Red": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Light Red": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Red-Orange": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Orange": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Orange": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Amber": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Gold": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Lime Green": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Green": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Forest Green": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Forest Green": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Spring Green": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Medium Aquamarine": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Cyan": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Cyan": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Classic Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Deep Sky Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Indigo": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Medium Slate Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Blue Violet": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Purple": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Orchid": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Plum": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Violet": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Hot Pink": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Light Pink": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Pink": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Salmon": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Lavender Blush": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Misty Rose": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Powder Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Orange (again)": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Silver": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Dark Gray": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Charcoal": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Deep Pink": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Steel Blue": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Turquoise": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Peach": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Honeydew": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Coral": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) }
+
 }
 console.log( AI_personalities );
 
@@ -160,18 +155,49 @@ export default {
     return {
       territories,
       possibleTeams: [
-    { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
-    { name: "Orange", color: "rgba(255, 128, 10, 0.6)", enabled: true, player: false },
-    { name: "Yellow", color: "rgba(255, 255, 0, 0.6)", enabled: true, player: false },
-    { name: "Green", color: "rgba(0, 255, 0, 0.6)", enabled: true, player: false },
-    { name: "Teal", color: "rgba(125, 245, 244, 0.6)", enabled: true, player: false },
-    { name: "Blue", color: "rgba(0, 0, 255, 0.6)", enabled: true, player: false },
-    { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
-    { name: "Pink", color: "rgba(250, 176, 223, 0.6)", enabled: true, player: false },
-    { name: "White", color: "rgba(255, 255, 255, 0.6)", enabled: true, player: false },
-    { name: "Grey", color: "rgba(100, 100, 100, 0.6)", enabled: true, player: false },
-    { name: "Black", color: "rgba(0, 0, 0, 0.6)", enabled: true, player: false },
-    { name: "Brown", color: "rgba(164, 42, 42, 0.6)", enabled: true, player: false }
+  { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
+  { name: "Light Red", color: "rgba(255, 64, 64, 0.6)", enabled: false, player: false },
+  { name: "Red-Orange", color: "rgba(255, 69, 0, 0.6)", enabled: false, player: false },
+  { name: "Orange", color: "rgba(255, 128, 0, 0.6)", enabled: true, player: false },
+  { name: "Dark Orange", color: "rgba(255, 140, 0, 0.6)", enabled: false, player: false },
+  { name: "Amber", color: "rgba(255, 191, 0, 0.6)", enabled: false, player: false },
+  { name: "Gold", color: "rgba(255, 215, 0, 0.6)", enabled: true, player: false },
+  { name: "Lime Green", color: "rgba(0, 255, 0, 0.6)", enabled: false, player: false },
+  { name: "Dark Green", color: "rgba(0, 204, 0, 0.6)", enabled: false, player: false },
+  { name: "Forest Green", color: "rgba(0, 128, 0, 0.6)", enabled: true, player: false },
+  { name: "Dark Forest Green", color: "rgba(34, 139, 34, 0.6)", enabled: false, player: false },
+  { name: "Spring Green", color: "rgba(0, 255, 127, 0.6)", enabled: false, player: false },
+  { name: "Medium Aquamarine", color: "rgba(102, 205, 170, 0.6)", enabled: false, player: false },
+  { name: "Cyan", color: "rgba(0, 255, 255, 0.6)", enabled: false, player: false },
+  { name: "Dark Cyan", color: "rgba(0, 204, 204, 0.6)", enabled: false, player: false },
+  { name: "Blue", color: "rgba(0, 102, 204, 0.6)", enabled: true, player: false },
+  { name: "Classic Blue", color: "rgba(0, 0, 255, 0.6)", enabled: false, player: false },
+  { name: "Deep Sky Blue", color: "rgba(0, 191, 255, 0.6)", enabled: false, player: false },
+  { name: "Indigo", color: "rgba(75, 0, 130, 0.6)", enabled: false, player: false },
+  { name: "Medium Slate Blue", color: "rgba(123, 104, 238, 0.6)", enabled: false, player: false },
+  { name: "Blue Violet", color: "rgba(138, 43, 226, 0.6)", enabled: false, player: false },
+  { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
+  { name: "Dark Orchid", color: "rgba(153, 50, 204, 0.6)", enabled: false, player: false },
+  { name: "Plum", color: "rgba(221, 160, 221, 0.6)", enabled: false, player: false },
+  { name: "Violet", color: "rgba(238, 130, 238, 0.6)", enabled: false, player: false },
+  { name: "Hot Pink", color: "rgba(255, 105, 180, 0.6)", enabled: false, player: false },
+  { name: "Light Pink", color: "rgba(255, 182, 193, 0.6)", enabled: false, player: false },
+  { name: "Pink", color: "rgba(255, 192, 203, 0.6)", enabled: false, player: false },
+  { name: "Salmon", color: "rgba(250, 128, 114, 0.6)", enabled: false, player: false },
+  { name: "Lavender Blush", color: "rgba(255, 240, 245, 0.6)", enabled: false, player: false },
+  { name: "Misty Rose", color: "rgba(255, 228, 225, 0.6)", enabled: false, player: false },
+  { name: "Powder Blue", color: "rgba(176, 224, 230, 0.6)", enabled: false, player: false },
+  { name: "Orange (again)", color: "rgba(255, 165, 0, 0.6)", enabled: false, player: false },
+  { name: "Silver", color: "rgba(192, 192, 192, 0.6)", enabled: false, player: false },
+  { name: "Dark Gray", color: "rgba(169, 169, 169, 0.6)", enabled: false, player: false },
+  { name: "Charcoal", color: "rgba(64, 64, 64, 0.6)", enabled: false, player: false },
+  { name: "Deep Pink", color: "rgba(255, 20, 147, 0.6)", enabled: false, player: false },
+  { name: "Steel Blue", color: "rgba(70, 130, 180, 0.6)", enabled: false, player: false },
+  { name: "Turquoise", color: "rgba(64, 224, 208, 0.6)", enabled: false, player: false },
+  { name: "Peach", color: "rgba(255, 218, 185, 0.6)", enabled: false, player: false },
+  { name: "Honeydew", color: "rgba(240, 255, 240, 0.6)", enabled: false, player: false },
+  { name: "Coral", color: "rgba(255, 127, 80, 0.6)", enabled: false, player: false }
+
       ],
       canvas: undefined,
       ctx: {},
