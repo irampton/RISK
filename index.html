@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1>RISK</h1>
+<canvas id="gameCanvas" width="800" height="500"></canvas>
+<br>
+<button onclick="nextTurn()">Next Turn</button>
+<br>
+<br>
+<div style="height: 600px; overflow-y: scroll; margin-left: 25%; width: 50%; text-align: left; border: black thin solid; padding: .5rem" id="gameLog">
+
+</div>
+
+
+<script src="AI.js"></script>
+<script src="territories.js"></script>
+<script src="index.js">
+</script>
+</body>
+<style>
+    canvas {
+        display: block;
+        margin: auto;
+        border: 1px solid black;
+    }
+
+    body {
+        text-align: center;
+    }
+</style>
+</html>
