@@ -101,7 +101,7 @@ import {
 } from "@/scripts/territories.js"
 
 const AI_personalities = {
-  "Red": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
+  "Red": { "aggressive": normalRandom(1, 0.15), "cling": normalRandom(0.0, 0.0) },
   "Light Red": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
   "Red-Orange": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
   "Orange": { "aggressive": normalRandom(0.3, 0.15), "cling": normalRandom(0.15, 0.1) },
