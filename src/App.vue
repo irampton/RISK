@@ -14,7 +14,7 @@
             <div style="width: 20%">
               <input type="checkbox" v-model="team.enabled">
             </div>
-            <div style="width: 60%">
+            <div :style="`width: 60%; color:${team.color};`">
               {{ team.name }}
             </div>
             <div style="width: 20%">
@@ -160,18 +160,18 @@ export default {
     return {
       territories,
       possibleTeams: [
-    { id: 0, name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
-    { id: 1, name: "Orange", color: "rgba(255, 128, 10, 0.6)", enabled: true, player: false },
-    { id: 2, name: "Yellow", color: "rgba(255, 255, 0, 0.6)", enabled: true, player: false },
-    { id: 3, name: "Green", color: "rgba(0, 255, 0, 0.6)", enabled: true, player: false },
-    { id: 4, name: "Teal", color: "rgba(125, 245, 244, 0.6)", enabled: true, player: false },
-    { id: 5, name: "Blue", color: "rgba(0, 0, 255, 0.6)", enabled: true, player: false },
-    { id: 6, name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
-    { id: 7, name: "Pink", color: "rgba(250, 176, 223, 0.6)", enabled: true, player: false },
-    { id: 8, name: "White", color: "rgba(255, 255, 255, 0.6)", enabled: true, player: false },
-    { id: 9, name: "Grey", color: "rgba(100, 100, 100, 0.6)", enabled: true, player: false },
-    { id: 10, name: "Black", color: "rgba(0, 0, 0, 0.6)", enabled: true, player: false },
-    { id: 11, name: "Brown", color: "rgba(164, 42, 42, 0.6)", enabled: true, player: false }
+    { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
+    { name: "Orange", color: "rgba(255, 128, 10, 0.6)", enabled: true, player: false },
+    { name: "Yellow", color: "rgba(255, 255, 0, 0.6)", enabled: true, player: false },
+    { name: "Green", color: "rgba(0, 255, 0, 0.6)", enabled: true, player: false },
+    { name: "Teal", color: "rgba(125, 245, 244, 0.6)", enabled: true, player: false },
+    { name: "Blue", color: "rgba(0, 0, 255, 0.6)", enabled: true, player: false },
+    { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
+    { name: "Pink", color: "rgba(250, 176, 223, 0.6)", enabled: true, player: false },
+    { name: "White", color: "rgba(255, 255, 255, 0.6)", enabled: true, player: false },
+    { name: "Grey", color: "rgba(100, 100, 100, 0.6)", enabled: true, player: false },
+    { name: "Black", color: "rgba(0, 0, 0, 0.6)", enabled: true, player: false },
+    { name: "Brown", color: "rgba(164, 42, 42, 0.6)", enabled: true, player: false }
       ],
       canvas: undefined,
       ctx: {},
