@@ -22,7 +22,7 @@
             </div>
           </div>
         </div>
-        <div id="gameLog" v-if="gameState === 'play'">
+        <div id="gameLog" v-if="['place', 'play', 'end'].includes(gameState)">
           <p v-for="message in gameLog">
             <span :style="`color: ${teams[message.teamID].color}`">{{ teams[message.teamID].name }}</span>
             {{ message.text }}
@@ -60,12 +60,20 @@
           </template>
         </div>
         <div>
-          <button v-if="gameState !== 'play' && !UImode" @click="nextTurn">{{ buttonText }}</button>
-          <button v-if="UImode === 'attack'" @click="attackButtonResolve('attack')">Attack</button>
-          <button v-if="UImode === 'attack'" @click="attackButtonResolve('attackInf')">Attack Infinite</button>
-          <button v-if="UImode === 'attack'" @click="attackButtonResolve('done')">Done Attacking</button>
-          <button v-if="UImode === 'move'" @click="moveButtonResolve('move')">Move</button>
-          <button v-if="UImode === 'move'" @click="moveButtonResolve('done')">Done Moving</button>
+          <button v-if="gameState !== 'play' && !UImode && buttonText" @click="nextTurn">{{ buttonText }}</button>
+          <template v-if="UImode === 'attack'">
+            <button @click="attackButtonResolve('attack')">Attack</button>
+            <button @click="attackButtonResolve('attackInf')">Attack Infinite</button>
+            <button @click="attackButtonResolve('done')">Done Attacking</button>
+          </template>
+          <template v-if="UImode === 'move'">
+            <button @click="moveButtonResolve('move')">Move</button>
+            <button @click="moveButtonResolve('done')">Done Moving</button>
+          </template>
+          <template v-if="gameState === 'end'">
+            <button @click="() => playAgainButton(true)">Play again with same teams</button>
+            <button @click="() => playAgainButton()">Play again with different teams</button>
+          </template>
         </div>
         <div style="width: 20%"></div>
       </div>
@@ -93,21 +101,12 @@ canvas {
 </style>
 
 <script>
-import { AI } from "@/scripts/AI.js";
+import { AI, hasPath, randomPersonality } from "@/scripts/AI.js";
 import {
   territories,
   territoryPolygons,
   continents
 } from "@/scripts/territories.js"
-
-const AI_personalities = {
-  "Red": { "aggressive": normalRandom( .95, 0.15 ), "cling": normalRandom( 0.02, 0.01 ) },
-  "Orange": { "aggressive": normalRandom( 0.55, 0.12 ), "cling": normalRandom( 0.1, 0.05 ) },
-  "Gold": { "aggressive": normalRandom( 0.5, 0.2 ), "cling": normalRandom( 0.15, 0.1 ) },
-  "Forest Green": { "aggressive": normalRandom( 0.35, 0.2 ), "cling": normalRandom( 0.5, 0.15 ) },
-  "Blue": { "aggressive": normalRandom( 0.6, 0.1 ), "cling": normalRandom( 0.05, 0.2 ) },
-  "Purple": { "aggressive": normalRandom( 0.6, 0.25 ), "cling": normalRandom( 0.6, 0.3 ) },
-}
 
 export default {
   name: "RISK",
@@ -236,6 +235,8 @@ export default {
             this.nextTurn();
           } else if ( this.numberOfTerritories( this.currentTeam ) === territories.length ) {
             this.addToGameLog( this.currentTeam, 'won!' );
+            this.gameState = 'end';
+            return;
           } else {
             team.freeTroops = this.numberOfTroopsToPLace( this.currentTeam );
             this.addToGameLog( this.currentTeam, `starts their turn by placing ${ team.freeTroops } troops` );
@@ -482,25 +483,44 @@ export default {
         ctx.fillText( t.troops, centerX, centerY + 5 );
       } );
     },
-    beginGame() {
-      this.teams = this.possibleTeams
-          .filter( t => t.enabled )
-          .sort( () => Math.random() - 0.5 )
-          .map( ( t, i ) => ( {
-            ...t,
-            id: i,
-            freeTroops: 0,
-            personality:
-                t.player
-                    ? undefined
-                    : AI_personalities[t.name] || randomPersonality()
-          } ) );
+    beginGame( sameTeams = false ) {
+      if ( sameTeams ) {
+        this.teams = this.teams
+            .sort( () => Math.random() - 0.5 )
+            .map( ( t, i ) => ( {
+              ...t,
+              id: i,
+              freeTroops: 0
+            } ) );
+      } else {
+        this.teams = this.possibleTeams
+            .filter( t => t.enabled )
+            .sort( () => Math.random() - 0.5 )
+            .map( ( t, i ) => ( {
+              ...t,
+              id: i,
+              freeTroops: 0,
+              personality:
+                  t.player
+                      ? undefined
+                      : AI.personalities[t.name] || randomPersonality()
+            } ) );
+      }
       randomizeTerritories( this.teams, this.gameData.territories );
       this.drawMap();
       this.teams.forEach( team => {
         team.freeTroops = 40 - this.gameData.territories
             .reduce( ( sum, t ) => sum + ( t.owner === team.id ? t.troops : 0 ), 0 )
       } );
+    },
+    playAgainButton( sameTeams = false ) {
+      if ( sameTeams ) {
+        this.beginGame( true );
+        this.gameState = 'place';
+      } else {
+        this.gameState = 'initial';
+      }
+      this.gameLog = [];
     }
   },
   mounted() {
@@ -634,35 +654,5 @@ async function getClickedPolygonIndex( canvas, polygons ) {
 
     canvas.addEventListener( "click", handleClick );
   } );
-}
-
-function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = new Set() ) {
-  if ( sourceId === targetId ) return true;
-  visited.add( sourceId );
-  const sourceTerritory = territories[sourceId];
-  const neighbors = sourceTerritory.connections.filter( connId => {
-    const neighbor = gameStateTerritories.find( t => t.id === connId );
-    return neighbor.owner === teamId && !visited.has( connId );
-  } );
-
-  return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
-}
-
-function randomPersonality(){
- return  {
-   "aggressive": normalRandom( 0.5, 0.2 ),
-   "cling": normalRandom( 0.1, 0.15 )
- }
-}
-function normalRandom( mean = 0.5, stdDev = 0.1 ) {
-  // Using the Box-Muller transform to generate a normal distribution
-  let u1 = Math.random();
-  let u2 = Math.random();
-
-  // Box-Muller transform
-  let z0 = Math.sqrt( -2 * Math.log( u1 ) ) * Math.cos( 2 * Math.PI * u2 );
-
-  // Return the scaled value (normal distribution)
-  return mean + z0 * stdDev;
 }
 </script>

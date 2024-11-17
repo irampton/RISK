@@ -1,7 +1,19 @@
+import { territories } from "@/scripts/territories.js";
+
+const personalities = {
+    "Red": { "aggressive": normalRandom( .95, 0.15 ), "cling": normalRandom( 0.02, 0.01 ) },
+    "Orange": { "aggressive": normalRandom( 0.55, 0.12 ), "cling": normalRandom( 0.1, 0.05 ) },
+    "Gold": { "aggressive": normalRandom( 0.5, 0.2 ), "cling": normalRandom( 0.15, 0.1 ) },
+    "Forest Green": { "aggressive": normalRandom( 0.35, 0.2 ), "cling": normalRandom( 0.5, 0.15 ) },
+    "Blue": { "aggressive": normalRandom( 0.6, 0.1 ), "cling": normalRandom( 0.05, 0.2 ) },
+    "Purple": { "aggressive": normalRandom( 0.6, 0.25 ), "cling": normalRandom( 0.6, 0.3 ) },
+}
+
 export const AI = {
     placeTroop,
     attack,
-    moveTroops
+    moveTroops,
+    personalities
 };
 
 function placeTroop(gameStateTerritories, territories, teamId, personality) {
@@ -83,81 +95,93 @@ function placeTroop(gameStateTerritories, territories, teamId, personality) {
 }
 
 
-function attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
+function attack(gameStateTerritories, territories, teamId, personality, turnStats) {
     const { aggressive, cling } = personality;
 
-    // Helper function to check if a territory helps the AI control a continent
-    function isContinentTarget( territoryId ) {
-        const territory = territories.find( t => t.id === territoryId );
-        const continentTerritories = territories.filter( t => t.continent === territory.continent );
-        const ownedContinentTerritories = gameStateTerritories.filter( t => t.owner === teamId && continentTerritories.some( ct => ct.id === t.id ) );
+    // Prepare for optimization
+    const territoryMap = new Map(territories.map(t => [t.id, t]));
+    const continentMap = getContinentTerritories(territories);
 
-        return ownedContinentTerritories.length >= continentTerritories.length - 2; // Nearing full control of the continent
+    // Helper functions...
+    function isContinentTarget(territoryId, ownedTerritories) {
+        const territory = territoryMap.get(territoryId);
+        const continentTerritories = continentMap[territory.continent];
+        const ownedContinentTerritories = ownedTerritories.filter(t => continentTerritories.includes(t.id));
+        return ownedContinentTerritories.length >= continentTerritories.length - 2;
     }
 
-    // Helper function to calculate how many owned territories are connected to a target
-    function getConnectedOwnedTerritories( targetId ) {
-        const targetData = territories.find( t => t.id === targetId );
-        const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
-        const connectedOwnedTerritories = targetData.connections.filter( connId => {
-            return ownedTerritories.some( t => t.id === connId );
-        } );
-
-        return connectedOwnedTerritories.length;
+    function getConnectedOwnedTerritories(targetId, ownedTerritories) {
+        const targetData = territoryMap.get(targetId);
+        return targetData.connections.filter(connId => ownedTerritories.some(t => t.id === connId)).length;
     }
 
-    // Get AI's territories
-    const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
+    function getSupportingNeighbors(attackerId, targetId, ownedTerritories) {
+        // Find the target territory and its connections
+        const target = territoryMap.get(targetId);
+        const targetConnections = target.connections;
 
-    // Determine potential attacks
+        // Find all neighboring owned territories that can support the attack
+        const supportingNeighbors = targetConnections.filter(connId => {
+            const neighbor = territoryMap.get(connId);
+            return neighbor.owner === teamId && neighbor.id !== attackerId && neighbor.troops > 2; // Neighbor must have troops
+        });
+
+        return supportingNeighbors;
+    }
+
+    const ownedTerritories = gameStateTerritories.filter(t => t.owner === teamId);
+
+    // Attack options
     const attackOptions = [];
-    ownedTerritories.forEach( attacker => {
-        if ( attacker.troops <= 1 ) return; // Cannot attack with 1 or fewer troops
+    ownedTerritories.forEach(attacker => {
+        if (attacker.troops <= 1) return;
 
-        const attackerData = territories.find( t => t.id === attacker.id );
-        attackerData.connections.forEach( targetId => {
-            const target = gameStateTerritories.find( t => t.id === targetId );
-            if ( target.owner !== teamId ) {
-                // Calculate attack desirability
+        territories[attacker.id].connections.forEach(targetId => {
+            const target = gameStateTerritories.find(t => t.id === targetId);
+            if (target.owner !== teamId) {
+                // Desirability calculation...
                 const troopDifference = attacker.troops - target.troops;
-                const offensiveScore = aggressive * troopDifference; // Favor attacking weaker enemies
-                const defensiveRisk = ( 1 - cling ) * target.troops; // Consider potential losses
-                const priorAggressionPenalty = turnStats.territoriesWon * ( 1 - aggressive ); // Penalize attacking after many wins
-                const consolidationBonus = isContinentTarget( targetId ) ? ( 4 * aggressive ) : 0; // Bonus for capturing a continent
-                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId ) * ( aggressive + .2 ); // Bonus for territories connected to more owned ones
-                const gapBonus = troopDifference >= 8 ? ( 8 * Math.min( 1, aggressive * +.33 ) ) : 0;
+                const offensiveScore = aggressive * troopDifference;
+                const defensiveRisk = (1 - cling) * Math.pow(target.troops, 0.8);
+                const priorAggressionPenalty = turnStats.territoriesWon * (1 - aggressive);
+                const consolidationBonus = isContinentTarget(targetId, ownedTerritories) ? (4 * aggressive) : 0;
+                const connectedOwnedBonus = getConnectedOwnedTerritories(targetId, ownedTerritories) * (aggressive + .2);
+                const gapBonus = troopDifference >= 8 ? (8 * Math.min(1, aggressive * .33)) : 0;
 
-                // Adjust desirability with the consolidation and connection bonuses
-                const desirability = offensiveScore - defensiveRisk - priorAggressionPenalty + consolidationBonus + connectedOwnedBonus + gapBonus;
+                // Get support from neighboring territories
+                const supportingNeighbors = getSupportingNeighbors(attacker.id, targetId, ownedTerritories);
+                const supportingTroops = supportingNeighbors.reduce((total, neighbor) => total + neighbor.troops, 0);
+                const multiTerritoryBonus = supportingTroops > 0 ? (supportingTroops * 0.3 * aggressive) : 0; // Boost if there are supporting troops
 
-                attackOptions.push( {
+                let desirability = offensiveScore - defensiveRisk - priorAggressionPenalty + consolidationBonus + connectedOwnedBonus + gapBonus + multiTerritoryBonus;
+
+                if (target.troops <= 1) desirability += 10; // Favor easy targets
+
+                attackOptions.push({
                     from: attacker.id,
                     to: target.id,
                     troopDifference,
                     attackerTroops: attacker.troops,
                     score: desirability,
-                    targetContinent: territories.find( t => t.id === target.id ).continent
-                } );
+                    supportingNeighbors
+                });
             }
-        } );
-    } );
+        });
+    });
 
-    // Sort attack options by score (highest first)
-    attackOptions.sort( ( a, b ) => b.score - a.score );
+    // Sort attack options
+    attackOptions.sort((a, b) => b.score - a.score);
 
     // Decide whether to attack
     const bestAttack = attackOptions[0];
-    if ( !bestAttack || bestAttack.score <= 0 ) {
-        // No viable attack option or all scores are negative
+    if (!bestAttack || bestAttack.score <= 0) {
         return { willAttack: false, attackFrom: null, attackTo: null, troops: 0, attempts: 0 };
     }
 
-    // Determine number of troops to commit based on troop difference and aggressiveness
-    const baseTroops = Math.max( 1, Math.floor( bestAttack.troopDifference * ( aggressive + .5 ) ) );
-    const troopsToUse = Math.min( baseTroops, bestAttack.attackerTroops - 1 ); // Always leave 1 troop behind
+    const baseTroops = Math.max(1, Math.floor(bestAttack.troopDifference * (aggressive + .5)));
+    const troopsToUse = Math.min(baseTroops, bestAttack.attackerTroops - 1);
 
-    // Decide attempts based on aggressiveness, make AI more likely to attack
-    const attempts = aggressive > 0.7 ? -1 : Math.ceil( troopsToUse / 2 );
+    const attempts = aggressive > 0.7 ? -1 : Math.ceil(troopsToUse / 2);
 
     return {
         willAttack: true,
@@ -168,81 +192,252 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
     };
 }
 
-
-function moveTroops( gameStateTerritories, territories, teamId, personality ) {
+function moveTroops(gameStateTerritories, territories, teamId, personality) {
     const { aggressive, cling } = personality;
 
-    // Helper function to check for an unbroken line of connected territories
-    function hasPath( sourceId, targetId, visited = new Set() ) {
-        if ( sourceId === targetId ) return true;
-        visited.add( sourceId );
+    // Precompute territory connections and vulnerability data for faster lookup
+    const territoryMap = new Map(gameStateTerritories.map(t => [t.id, t]));
+    const connectionMap = new Map(territories.map(t => [t.id, t.connections]));
+    const vulnerabilityCache = new Map();
+    const overstackPenaltyCache = new Map();
 
-        const sourceTerritory = territories.find( t => t.id === sourceId );
-        const neighbors = sourceTerritory.connections.filter( connId => {
-            const neighbor = gameStateTerritories.find( t => t.id === connId );
-            return neighbor.owner === teamId && !visited.has( connId );
-        } );
+    // Precompute all paths between territories
+    const pathCache = new Map();
+    function precomputePaths() {
+        function bfs(startId) {
+            const visited = new Set();
+            const queue = [startId];
+            const paths = new Map();
+            visited.add(startId);
+            paths.set(startId, true); // A territory has a path to itself
 
-        return neighbors.some( neighborId => hasPath( neighborId, targetId, visited ) );
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                const neighbors = connectionMap.get(currentId) || [];
+                neighbors.forEach(neighborId => {
+                    if (!visited.has(neighborId)) {
+                        visited.add(neighborId);
+                        queue.push(neighborId);
+                        paths.set(neighborId, true);
+                    }
+                });
+            }
+            return paths;
+        }
+
+        gameStateTerritories.forEach(territory => {
+            pathCache.set(territory.id, bfs(territory.id));
+        });
     }
 
-    // Get AI's territories
-    const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
+    precomputePaths();
 
-    // Find territories with surplus troops (more than 1 troop)
-    const surplusTerritories = ownedTerritories
-        .filter( t => t.troops > 1 )
-        .map( t => {
-            const territoryData = territories.find( td => td.id === t.id );
-            return {
-                id: t.id,
-                troops: t.troops,
-                connections: territoryData.connections
-            };
-        } );
+    function hasPath(sourceId, targetId) {
+        const sourcePaths = pathCache.get(sourceId);
+        return sourcePaths ? sourcePaths.has(targetId) : false;
+    }
 
-    // Find territories with defensive needs (enemy neighbors)
-    const needyTerritories = ownedTerritories
-        .map( t => {
-            const territoryData = territories.find( td => td.id === t.id );
-            const enemyNeighbors = territoryData.connections.filter( connId => {
-                const neighbor = gameStateTerritories.find( nt => nt.id === connId );
-                return neighbor && neighbor.owner !== teamId;
-            } );
-            return {
-                id: t.id,
-                troops: t.troops,
-                enemyCount: enemyNeighbors.length
-            };
-        } )
-        .filter( t => t.enemyCount > 0 );
+    // Helper function to calculate vulnerability for a territory
+    function calculateVulnerability(territory) {
+        if (vulnerabilityCache.has(territory.id)) {
+            return vulnerabilityCache.get(territory.id);
+        }
 
-    // Move troops based on priority (balance aggressive and cling)
-    surplusTerritories.forEach( source => {
-        needyTerritories.forEach( target => {
-            if ( source.id === target.id || source.troops <= 1 ) return; // Skip if source is target or no troops to move
+        const connectedTerritories = connectionMap.get(territory.id).map(id => territoryMap.get(id));
+        let vulnerability = 0;
 
-            // Check if there's a valid path
-            if ( !hasPath( source.id, target.id ) ) return;
-
-            const distance = 1; // Assuming immediate neighbors for simplicity
-            const priority = aggressive * target.enemyCount - cling * distance;
-
-            if ( priority > 0 ) {
-                // Move troops to a target with defensive needs, but don't send all troops
-                const troopsToMove = Math.max( 1, Math.floor( ( source.troops - 1 ) * 0.5 ) ); // Move half of surplus, but at least 1 troop
-                if ( troopsToMove > 0 ) {
-                    // Update troop counts directly in gameStateTerritories
-                    const sourceTerritory = gameStateTerritories.find( t => t.id === source.id );
-                    const targetTerritory = gameStateTerritories.find( t => t.id === target.id );
-
-                    // Ensure no negative troop counts
-                    if ( sourceTerritory.troops > troopsToMove ) {
-                        sourceTerritory.troops -= troopsToMove;
-                        targetTerritory.troops += troopsToMove;
-                    }
+        connectedTerritories.forEach(neighbor => {
+            if (neighbor && neighbor.owner !== teamId) {
+                const troopDifference = neighbor.troops - territory.troops;
+                if (troopDifference > 0) {
+                    vulnerability += troopDifference;
                 }
             }
-        } );
+        });
+
+        vulnerabilityCache.set(territory.id, vulnerability);
+        return vulnerability;
+    }
+
+    // Helper function to calculate exponential penalty for overstacking
+    function calculateExponentialPenalty(territory) {
+        if (overstackPenaltyCache.has(territory.id)) {
+            return overstackPenaltyCache.get(territory.id);
+        }
+
+        const connectedTerritories = connectionMap.get(territory.id).map(id => territoryMap.get(id));
+        let penalty = 0;
+
+        connectedTerritories.forEach(neighbor => {
+            if (neighbor) {
+                const troopDifference = territory.troops - neighbor.troops;
+                if (troopDifference > 3) {
+                    penalty += Math.exp(troopDifference / 3);
+                }
+            }
+        });
+
+        overstackPenaltyCache.set(territory.id, penalty);
+        return penalty;
+    }
+
+    // Helper function to check if a territory is safe
+    function isSafe(territory) {
+        return connectionMap.get(territory.id).every(id => territoryMap.get(id).owner === territory.owner);
+    }
+
+    // Find all AI-owned territories
+    const aiTerritories = gameStateTerritories.filter(t => t.owner === teamId);
+    const troopCount = aiTerritories.reduce((sum, t) => sum + t.troops, 0);
+
+    let movesMade = 0;
+    let maxTroopsToMove = 5;  // Move up to 5 troops at a time
+
+    // Continue moving troops as long as the AI wants to make moves
+    while (movesMade < troopCount) {
+        let bestMove = null;
+        let maxPriority = -Infinity;
+        let moveMadeThisRound = false;
+
+        // Evaluate all possible source and target pairs
+        aiTerritories.forEach(source => {
+            if (source.troops <= 1) return; // Skip if source can't spare troops
+
+            aiTerritories.forEach(target => {
+                if (source.id === target.id) return; // Skip if source and target are the same
+                if (!hasPath(source.id, target.id)) return; // Skip if no path exists
+
+                let priorityScore = 0;
+
+                // Factor 1: Protect vulnerable territories
+                const targetVulnerability = calculateVulnerability(target);
+                priorityScore += cling * targetVulnerability;
+
+                // Factor 2: Avoid leaving extra troops in safe territories
+                const sourceVulnerability = calculateVulnerability(source);
+                if (sourceVulnerability === 0) {
+                    priorityScore += aggressive * -source.troops; // Penalize leaving extra troops in safe areas
+                }
+
+                // Factor 3: Optimize attack potential
+                const targetConnections = connectionMap.get(target.id).map(id => territoryMap.get(id));
+                targetConnections.forEach(neighbor => {
+                    if (neighbor && neighbor.owner !== teamId) {
+                        const troopDifference = target.troops - neighbor.troops;
+                        if (troopDifference > 0) {
+                            priorityScore += aggressive * troopDifference;
+                        }
+                    }
+                });
+
+                // Factor 4: Penalize large stacks based on troop difference with neighbors
+                const connectedTerritories = connectionMap.get(target.id).map(id => territoryMap.get(id));
+                connectedTerritories.forEach(neighbor => {
+                    if (neighbor) {
+                        const troopDifference = target.troops - neighbor.troops;
+                        if (troopDifference > 0) {
+                            priorityScore -= cling * troopDifference * .5;
+                        }
+                    }
+                });
+
+                // Factor 5: Prioritize protection for weak territories with adjacent enemy presence
+                const adjacentEnemies = connectionMap.get(target.id)
+                    .map(id => territoryMap.get(id))
+                    .filter(neighbor => neighbor && neighbor.owner !== teamId);
+                adjacentEnemies.forEach(enemy => {
+                    const enemyTroopDifference = enemy.troops - target.troops;
+                    if (enemyTroopDifference > 0) {
+                        priorityScore += cling * enemyTroopDifference;
+                    }
+                });
+
+                // Factor 6: Increase priority for safe territories (with no enemy neighbors)
+                if (isSafe(source)) {
+                    priorityScore += 1e3;
+                }
+
+                // **Prevent moving troops into safe territories**
+                if (isSafe(target)) {
+                    priorityScore -= 1e10;
+                }
+
+                // **Force movement out of safe territories if reinforcement is needed**
+                if (isSafe(source) && calculateVulnerability(target)) {
+                    priorityScore += 1e4;
+                }
+
+                // Factor 7: Apply exponential penalty for overstacking
+                const overstackPenalty = calculateExponentialPenalty(target);
+                priorityScore -= overstackPenalty;
+
+                // New Factor: Encourage spreading out troops to less populated territories
+                if (target.troops < source.troops) {
+                    priorityScore += aggressive * (source.troops - target.troops); // Favor moving to weaker territories
+                }
+
+                // Check if this move is better than the current best
+                if (priorityScore > maxPriority) {
+                    const troopsToMove = Math.min(maxTroopsToMove, source.troops - 1);
+                    bestMove = { source, target, troopsToMove };
+                    maxPriority = priorityScore;
+                    moveMadeThisRound = true;
+                }
+            });
+        });
+
+        // If a valid move was found, make the move
+        if (bestMove) {
+            bestMove.source.troops -= bestMove.troopsToMove;
+            bestMove.target.troops += bestMove.troopsToMove;
+            movesMade++;
+        } else {
+            break;
+        }
+    }
+}
+
+function getContinentTerritories(territories) {
+    const continentMap = {};
+
+    territories.forEach(territory => {
+        if (!continentMap[territory.continent]) {
+            continentMap[territory.continent] = [];
+        }
+        continentMap[territory.continent].push(territory.id);
+    });
+
+    return continentMap;
+}
+
+
+export function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = new Set() ) {
+    if ( sourceId === targetId ) return true;
+    visited.add( sourceId );
+    const sourceTerritory = territories[sourceId];
+    const neighbors = sourceTerritory.connections.filter( connId => {
+        const neighbor = gameStateTerritories.find( t => t.id === connId );
+        return neighbor.owner === teamId && !visited.has( connId );
     } );
+
+    return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
+}
+
+export function randomPersonality(){
+    return  {
+        "aggressive": normalRandom( 0.5, 0.2 ),
+        "cling": normalRandom( 0.1, 0.15 )
+    }
+}
+
+function normalRandom( mean = 0.5, stdDev = 0.1 ) {
+    // Using the Box-Muller transform to generate a normal distribution
+    let u1 = Math.random();
+    let u2 = Math.random();
+
+    // Box-Muller transform
+    let z0 = Math.sqrt( -2 * Math.log( u1 ) ) * Math.cos( 2 * Math.PI * u2 );
+
+    // Return the scaled value (normal distribution)
+    return mean + z0 * stdDev;
 }
