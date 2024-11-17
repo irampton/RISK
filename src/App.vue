@@ -506,6 +506,7 @@ export default {
                       : AI.personalities[t.name] || randomPersonality()
             } ) );
       }
+      //console.log(JSON.parse(JSON.stringify(this.teams)));
       randomizeTerritories( this.teams, this.gameData.territories );
       this.drawMap();
       this.teams.forEach( team => {
