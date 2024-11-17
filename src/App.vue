@@ -60,7 +60,7 @@
           </template>
         </div>
         <div>
-          <button v-if="!UImode" @click="nextTurn">{{ buttonText }}</button>
+          <button v-if="gameState !== 'play' && !UImode" @click="nextTurn">{{ buttonText }}</button>
           <button v-if="UImode === 'attack'" @click="attackButtonResolve('attack')">Attack</button>
           <button v-if="UImode === 'attack'" @click="attackButtonResolve('attackInf')">Attack Infinite</button>
           <button v-if="UImode === 'attack'" @click="attackButtonResolve('done')">Done Attacking</button>
@@ -101,52 +101,13 @@ import {
 } from "@/scripts/territories.js"
 
 const AI_personalities = {
-  "Red": { "aggressive": normalRandom(1, 0.15), "cling": normalRandom(0.0, 0.0) },
-  "Light Red": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Red-Orange": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Orange": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Orange": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Amber": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Gold": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Lime Green": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Green": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Forest Green": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Forest Green": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Spring Green": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Medium Aquamarine": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Cyan": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Cyan": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Classic Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Deep Sky Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Indigo": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Medium Slate Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Blue Violet": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Purple": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Orchid": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Plum": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Violet": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Hot Pink": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Light Pink": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Pink": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Salmon": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Lavender Blush": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Misty Rose": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Powder Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Orange (again)": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Silver": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Dark Gray": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Charcoal": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Deep Pink": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Steel Blue": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Turquoise": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Peach": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Honeydew": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) },
-  "Coral": { "aggressive": normalRandom(0.5, 0.2), "cling": normalRandom(0.15, 0.1) }
-
+  "Red": { "aggressive": normalRandom( .95, 0.15 ), "cling": normalRandom( 0.02, 0.01 ) },
+  "Orange": { "aggressive": normalRandom( 0.55, 0.12 ), "cling": normalRandom( 0.1, 0.05 ) },
+  "Gold": { "aggressive": normalRandom( 0.5, 0.2 ), "cling": normalRandom( 0.15, 0.1 ) },
+  "Forest Green": { "aggressive": normalRandom( 0.35, 0.2 ), "cling": normalRandom( 0.5, 0.15 ) },
+  "Blue": { "aggressive": normalRandom( 0.6, 0.1 ), "cling": normalRandom( 0.05, 0.2 ) },
+  "Purple": { "aggressive": normalRandom( 0.6, 0.25 ), "cling": normalRandom( 0.6, 0.3 ) },
 }
-console.log( AI_personalities );
-
 
 export default {
   name: "RISK",
@@ -155,48 +116,48 @@ export default {
     return {
       territories,
       possibleTeams: [
-  { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
-  { name: "Light Red", color: "rgba(255, 64, 64, 0.6)", enabled: false, player: false },
-  { name: "Red-Orange", color: "rgba(255, 69, 0, 0.6)", enabled: false, player: false },
-  { name: "Orange", color: "rgba(255, 128, 0, 0.6)", enabled: true, player: false },
-  { name: "Dark Orange", color: "rgba(255, 140, 0, 0.6)", enabled: false, player: false },
-  { name: "Amber", color: "rgba(255, 191, 0, 0.6)", enabled: false, player: false },
-  { name: "Gold", color: "rgba(255, 215, 0, 0.6)", enabled: true, player: false },
-  { name: "Lime Green", color: "rgba(0, 255, 0, 0.6)", enabled: false, player: false },
-  { name: "Dark Green", color: "rgba(0, 204, 0, 0.6)", enabled: false, player: false },
-  { name: "Forest Green", color: "rgba(0, 128, 0, 0.6)", enabled: true, player: false },
-  { name: "Dark Forest Green", color: "rgba(34, 139, 34, 0.6)", enabled: false, player: false },
-  { name: "Spring Green", color: "rgba(0, 255, 127, 0.6)", enabled: false, player: false },
-  { name: "Medium Aquamarine", color: "rgba(102, 205, 170, 0.6)", enabled: false, player: false },
-  { name: "Cyan", color: "rgba(0, 255, 255, 0.6)", enabled: false, player: false },
-  { name: "Dark Cyan", color: "rgba(0, 204, 204, 0.6)", enabled: false, player: false },
-  { name: "Blue", color: "rgba(0, 102, 204, 0.6)", enabled: true, player: false },
-  { name: "Classic Blue", color: "rgba(0, 0, 255, 0.6)", enabled: false, player: false },
-  { name: "Deep Sky Blue", color: "rgba(0, 191, 255, 0.6)", enabled: false, player: false },
-  { name: "Indigo", color: "rgba(75, 0, 130, 0.6)", enabled: false, player: false },
-  { name: "Medium Slate Blue", color: "rgba(123, 104, 238, 0.6)", enabled: false, player: false },
-  { name: "Blue Violet", color: "rgba(138, 43, 226, 0.6)", enabled: false, player: false },
-  { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
-  { name: "Dark Orchid", color: "rgba(153, 50, 204, 0.6)", enabled: false, player: false },
-  { name: "Plum", color: "rgba(221, 160, 221, 0.6)", enabled: false, player: false },
-  { name: "Violet", color: "rgba(238, 130, 238, 0.6)", enabled: false, player: false },
-  { name: "Hot Pink", color: "rgba(255, 105, 180, 0.6)", enabled: false, player: false },
-  { name: "Light Pink", color: "rgba(255, 182, 193, 0.6)", enabled: false, player: false },
-  { name: "Pink", color: "rgba(255, 192, 203, 0.6)", enabled: false, player: false },
-  { name: "Salmon", color: "rgba(250, 128, 114, 0.6)", enabled: false, player: false },
-  { name: "Lavender Blush", color: "rgba(255, 240, 245, 0.6)", enabled: false, player: false },
-  { name: "Misty Rose", color: "rgba(255, 228, 225, 0.6)", enabled: false, player: false },
-  { name: "Powder Blue", color: "rgba(176, 224, 230, 0.6)", enabled: false, player: false },
-  { name: "Orange (again)", color: "rgba(255, 165, 0, 0.6)", enabled: false, player: false },
-  { name: "Silver", color: "rgba(192, 192, 192, 0.6)", enabled: false, player: false },
-  { name: "Dark Gray", color: "rgba(169, 169, 169, 0.6)", enabled: false, player: false },
-  { name: "Charcoal", color: "rgba(64, 64, 64, 0.6)", enabled: false, player: false },
-  { name: "Deep Pink", color: "rgba(255, 20, 147, 0.6)", enabled: false, player: false },
-  { name: "Steel Blue", color: "rgba(70, 130, 180, 0.6)", enabled: false, player: false },
-  { name: "Turquoise", color: "rgba(64, 224, 208, 0.6)", enabled: false, player: false },
-  { name: "Peach", color: "rgba(255, 218, 185, 0.6)", enabled: false, player: false },
-  { name: "Honeydew", color: "rgba(240, 255, 240, 0.6)", enabled: false, player: false },
-  { name: "Coral", color: "rgba(255, 127, 80, 0.6)", enabled: false, player: false }
+        { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
+        { name: "Light Red", color: "rgba(255, 64, 64, 0.6)", enabled: false, player: false },
+        { name: "Red-Orange", color: "rgba(255, 69, 0, 0.6)", enabled: false, player: false },
+        { name: "Orange", color: "rgba(255, 128, 0, 0.6)", enabled: true, player: false },
+        { name: "Dark Orange", color: "rgba(255, 140, 0, 0.6)", enabled: false, player: false },
+        { name: "Amber", color: "rgba(255, 191, 0, 0.6)", enabled: false, player: false },
+        { name: "Gold", color: "rgba(255, 215, 0, 0.6)", enabled: true, player: false },
+        { name: "Lime Green", color: "rgba(0, 255, 0, 0.6)", enabled: false, player: false },
+        { name: "Dark Green", color: "rgba(0, 204, 0, 0.6)", enabled: false, player: false },
+        { name: "Forest Green", color: "rgba(0, 128, 0, 0.6)", enabled: true, player: false },
+        { name: "Dark Forest Green", color: "rgba(34, 139, 34, 0.6)", enabled: false, player: false },
+        { name: "Spring Green", color: "rgba(0, 255, 127, 0.6)", enabled: false, player: false },
+        { name: "Medium Aquamarine", color: "rgba(102, 205, 170, 0.6)", enabled: false, player: false },
+        { name: "Cyan", color: "rgba(0, 255, 255, 0.6)", enabled: false, player: false },
+        { name: "Dark Cyan", color: "rgba(0, 204, 204, 0.6)", enabled: false, player: false },
+        { name: "Blue", color: "rgba(0, 102, 204, 0.6)", enabled: true, player: false },
+        { name: "Classic Blue", color: "rgba(0, 0, 255, 0.6)", enabled: false, player: false },
+        { name: "Deep Sky Blue", color: "rgba(0, 191, 255, 0.6)", enabled: false, player: false },
+        { name: "Indigo", color: "rgba(75, 0, 130, 0.6)", enabled: false, player: false },
+        { name: "Medium Slate Blue", color: "rgba(123, 104, 238, 0.6)", enabled: false, player: false },
+        { name: "Blue Violet", color: "rgba(138, 43, 226, 0.6)", enabled: false, player: false },
+        { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
+        { name: "Dark Orchid", color: "rgba(153, 50, 204, 0.6)", enabled: false, player: false },
+        { name: "Plum", color: "rgba(221, 160, 221, 0.6)", enabled: false, player: false },
+        { name: "Violet", color: "rgba(238, 130, 238, 0.6)", enabled: false, player: false },
+        { name: "Hot Pink", color: "rgba(255, 105, 180, 0.6)", enabled: false, player: false },
+        { name: "Light Pink", color: "rgba(255, 182, 193, 0.6)", enabled: false, player: false },
+        { name: "Pink", color: "rgba(255, 192, 203, 0.6)", enabled: false, player: false },
+        { name: "Salmon", color: "rgba(250, 128, 114, 0.6)", enabled: false, player: false },
+        { name: "Lavender Blush", color: "rgba(255, 240, 245, 0.6)", enabled: false, player: false },
+        { name: "Misty Rose", color: "rgba(255, 228, 225, 0.6)", enabled: false, player: false },
+        { name: "Powder Blue", color: "rgba(176, 224, 230, 0.6)", enabled: false, player: false },
+        { name: "Orange (again)", color: "rgba(255, 165, 0, 0.6)", enabled: false, player: false },
+        { name: "Silver", color: "rgba(192, 192, 192, 0.6)", enabled: false, player: false },
+        { name: "Dark Gray", color: "rgba(169, 169, 169, 0.6)", enabled: false, player: false },
+        { name: "Charcoal", color: "rgba(64, 64, 64, 0.6)", enabled: false, player: false },
+        { name: "Deep Pink", color: "rgba(255, 20, 147, 0.6)", enabled: false, player: false },
+        { name: "Steel Blue", color: "rgba(70, 130, 180, 0.6)", enabled: false, player: false },
+        { name: "Turquoise", color: "rgba(64, 224, 208, 0.6)", enabled: false, player: false },
+        { name: "Peach", color: "rgba(255, 218, 185, 0.6)", enabled: false, player: false },
+        { name: "Honeydew", color: "rgba(240, 255, 240, 0.6)", enabled: false, player: false },
+        { name: "Coral", color: "rgba(255, 127, 80, 0.6)", enabled: false, player: false }
 
       ],
       canvas: undefined,
@@ -226,8 +187,8 @@ export default {
           return "Start Game";
         case 'place':
           return "Place Troops";
-        case 'play':
-          return "Next Turn";
+        case 'ready':
+          return "Run Game";
       }
     }
   },
@@ -243,7 +204,7 @@ export default {
           if ( this.freeTroopsLeft() ) {
             if ( !team.player ) {
               if ( team.freeTroops > 0 ) {
-                AI.placeTroop( this.gameData.territories, territories, team.id, AI_personalities[team.name] );
+                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality );
                 team.freeTroops--;
               }
               this.drawMap();
@@ -264,9 +225,11 @@ export default {
               this.nextTurn();
             }
           } else {
-            this.gameState = 'play';
+            this.gameState = 'ready';
           }
           break;
+        case 'ready':
+          this.gameState = 'play';
         case 'play':
           if ( !this.numberOfTerritories( this.currentTeam ) ) {
             this.incrementTurn();
@@ -279,7 +242,7 @@ export default {
             if ( !team.player ) {
               //place phase
               while ( team.freeTroops > 0 ) {
-                AI.placeTroop( this.gameData.territories, territories, team.id, AI_personalities[team.name] );
+                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality );
                 team.freeTroops--;
               }
               //attack phase
@@ -290,7 +253,7 @@ export default {
                 troopsKilled: 0
               };
               do {
-                let attack = AI.attack( this.gameData.territories, territories, team.id, AI_personalities[team.name], turnStats );
+                let attack = AI.attack( this.gameData.territories, territories, team.id, team.personality, turnStats );
                 if ( attack.willAttack ) {
                   this.addToGameLog( this.currentTeam, `will attack ${ territories[attack.attackTo].name } from ${ territories[attack.attackFrom].name } with ${ attack.troops } troops` );
                   let results = executeAttack( this.gameData.territories, attack );
@@ -307,7 +270,7 @@ export default {
               } while ( attackAgain )
               this.addToGameLog( this.currentTeam, `will end their turn conquering ${ turnStats.territoriesWon } territories, killing ${ turnStats.troopsKilled } troops, and loosing ${ turnStats.troopsLost } troops` );
               //move phase
-              AI.moveTroops( this.gameData.territories, territories, team.id, AI_personalities[team.name] );
+              AI.moveTroops( this.gameData.territories, territories, team.id, team.personality );
               this.drawMap();
               this.incrementTurn();
               setTimeout( this.nextTurn, 250 );
@@ -346,7 +309,7 @@ export default {
                   if ( typeof tID === "string" ) {
                     if ( tID === 'done' ) {
                       this.playerAttack.done = true;
-                    } else if ( this.playerAttack.from !== null  && this.playerAttack.to !== null ) {
+                    } else if ( this.playerAttack.from !== null && this.playerAttack.to !== null ) {
                       this.playerAttack.rounds = tID === 'attackInf' ? -1 : 1;
                     }
                   } else if ( tID === null ) {
@@ -487,20 +450,20 @@ export default {
         ctx.closePath();
         ctx.fillStyle = this.teams[t.owner]?.color || "white";
         ctx.fill();
-        if(territory.continent == "North America"){
-        ctx.strokeStyle = "yellow";
-        }else if(territory.continent == "South America"){
-              ctx.strokeStyle = "orange";    
-        }else if(territory.continent == "Europe"){
-              ctx.strokeStyle = "blue";    
-        }else if(territory.continent == "Africa"){
-              ctx.strokeStyle = "red";    
-        }else if(territory.continent == "Asia"){
-              ctx.strokeStyle = "green";    
-        }else if(territory.continent == "Australia"){
-              ctx.strokeStyle = "purple";    
-        }else{
-          ctx.strokeStyle = "black";    
+        if ( territory.continent == "North America" ) {
+          ctx.strokeStyle = "yellow";
+        } else if ( territory.continent == "South America" ) {
+          ctx.strokeStyle = "orange";
+        } else if ( territory.continent == "Europe" ) {
+          ctx.strokeStyle = "blue";
+        } else if ( territory.continent == "Africa" ) {
+          ctx.strokeStyle = "red";
+        } else if ( territory.continent == "Asia" ) {
+          ctx.strokeStyle = "green";
+        } else if ( territory.continent == "Australia" ) {
+          ctx.strokeStyle = "purple";
+        } else {
+          ctx.strokeStyle = "black";
         }
         ctx.stroke();
 
@@ -523,7 +486,15 @@ export default {
       this.teams = this.possibleTeams
           .filter( t => t.enabled )
           .sort( () => Math.random() - 0.5 )
-          .map( ( t, i ) => ( { ...t, id: i, freeTroops: 0 } ) );
+          .map( ( t, i ) => ( {
+            ...t,
+            id: i,
+            freeTroops: 0,
+            personality:
+                t.player
+                    ? undefined
+                    : AI_personalities[t.name] || randomPersonality()
+          } ) );
       randomizeTerritories( this.teams, this.gameData.territories );
       this.drawMap();
       this.teams.forEach( team => {
@@ -677,6 +648,12 @@ function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = ne
   return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
 }
 
+function randomPersonality(){
+ return  {
+   "aggressive": normalRandom( 0.5, 0.2 ),
+   "cling": normalRandom( 0.1, 0.15 )
+ }
+}
 function normalRandom( mean = 0.5, stdDev = 0.1 ) {
   // Using the Box-Muller transform to generate a normal distribution
   let u1 = Math.random();
