@@ -486,7 +486,21 @@ export default {
         ctx.closePath();
         ctx.fillStyle = this.teams[t.owner]?.color || "white";
         ctx.fill();
-        ctx.strokeStyle = "black";
+        if(territory.continent == "North America"){
+        ctx.strokeStyle = "yellow";
+        }else if(territory.continent == "South America"){
+              ctx.strokeStyle = "orange";    
+        }else if(territory.continent == "Europe"){
+              ctx.strokeStyle = "blue";    
+        }else if(territory.continent == "Africa"){
+              ctx.strokeStyle = "red";    
+        }else if(territory.continent == "Asia"){
+              ctx.strokeStyle = "green";    
+        }else if(territory.continent == "Australia"){
+              ctx.strokeStyle = "purple";    
+        }else{
+          ctx.strokeStyle = "black";    
+        }
         ctx.stroke();
 
         // Calculate center of polygon for text
