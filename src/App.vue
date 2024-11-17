@@ -259,6 +259,7 @@ export default {
               this.gameData.territories[tID].troops++;
               team.freeTroops--;
               this.UImode = undefined;
+              this.drawMap();
               this.incrementTurn();
               this.nextTurn();
             }
@@ -404,8 +405,8 @@ export default {
                   if ( tID === 'done' ) {
                     this.playerAttack.done = true;
                   }
-                  if ( this.playerAttack.from &&
-                      this.playerAttack.to &&
+                  if ( this.playerAttack.from !== null &&
+                      this.playerAttack.to !== null &&
                       hasPath( this.gameData.territories, this.currentTeam, this.playerAttack.from, this.playerAttack.to ) ) {
                     const troopsToMove = Math.min( this.gameData.territories[this.playerAttack.from].troops - 1, this.playerAttack.troops );
                     this.gameData.territories[this.playerAttack.from].troops -= troopsToMove;

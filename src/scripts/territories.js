@@ -6,7 +6,7 @@ export const territories = [
     { "id": 2, "name": "Greenland", "connections": [ 1, 4, 5, 13 ], "continent": "North America" },
     { "id": 3, "name": "Alberta", "connections": [ 0, 1, 4, 6 ], "continent": "North America" },
     { "id": 4, "name": "Ontario", "connections": [ 1, 2, 3, 5, 6, 7 ], "continent": "North America" },
-    { "id": 5, "name": "Quebec", "connections": [ 1, 2, 3, 5, 6, 7 ], "continent": "North America" },
+    { "id": 5, "name": "Quebec", "connections": [ 1, 2, 3, 4, 6, 7 ], "continent": "North America" },
     { "id": 6, "name": "Western United States", "connections": [ 3, 4, 7, 8 ], "continent": "North America" },
     { "id": 7, "name": "Eastern United States", "connections": [ 4, 5, 6, 8 ], "continent": "North America" },
     { "id": 8, "name": "Central America", "connections": [ 6, 7, 9 ], "continent": "North America" },
