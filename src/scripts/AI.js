@@ -4,45 +4,84 @@ export const AI = {
     moveTroops
 };
 
-function placeTroop( gameStateTerritories, territories, teamId, personality ) {
+function placeTroop(gameStateTerritories, territories, teamId, personality) {
     const { aggressive, cling } = personality;
 
     // Get all territories owned by the AI
-    const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
+    const aiTerritories = gameStateTerritories.filter(t => t.owner === teamId);
 
-    // Calculate the priority for each owned territory
-    const territoryScores = ownedTerritories.map( territory => {
-        const territoryData = territories.find( t => t.id === territory.id );
-        const connections = territoryData.connections;
+    // Initialize variables to track the best choice and max priority score
+    let bestTerritory = null;
+    let maxPriority = -Infinity;
 
-        // Calculate the number of enemy neighbors
-        const enemyNeighbors = connections.filter( connId => {
-            const neighbor = gameStateTerritories.find( t => t.id === connId );
-            return neighbor && neighbor.owner !== teamId;
-        } );
+    // Evaluate each owned territory
+    aiTerritories.forEach(aiTerritory => {
+        const territoryData = territories.find(t => t.id === aiTerritory.id);
+        let priorityScore = 0;
 
-        // Score calculation
-        const defensiveWeight = ( 1 - cling ) * enemyNeighbors.length; // Defensive priority
-        const aggressiveWeight = aggressive * ( territory.troops || 1 ); // Offensive priority
-        const troopPenalty = 1 / ( territory.troops + 1 ); // Reduces score as troops increase
+        // Factor 1: Nearby positions with low troop counts
+        const connectedTerritories = territoryData.connections.map(id => {
+            return gameStateTerritories.find(t => t.id === id);
+        });
 
-        return {
-            id: territory.id,
-            score: ( defensiveWeight + aggressiveWeight ) * ( troopPenalty / 2 )
-        };
-    } );
+        connectedTerritories.forEach(neighbor => {
+            if (neighbor) {
+                if (neighbor.owner !== teamId) {
+                    const troopDifference = aiTerritory.troops - neighbor.troops;
+                    if (troopDifference > 0) {
+                        priorityScore += (aggressive * troopDifference); // Aggression boosts attack potential
+                    } else {
+                        priorityScore += (cling * Math.abs(troopDifference)); // Clinginess boosts defense
+                    }
 
-    // Find the territory with the highest score
-    const bestTerritory = territoryScores.reduce( ( best, current ) =>
-        current.score > best.score ? current : best
-    );
+                    // Factor 5: Single troop attack bonus
+                    if (neighbor.troops <= 2 && aiTerritory.troops < 4) {
+                        priorityScore += aggressive * 10 / neighbor.troops; // Large boost for opportunistic attack
+                    }
+                }
+            }
+        });
 
-    // Place 1 troop on the selected territory
-    const targetTerritory = gameStateTerritories.find( t => t.id === bestTerritory.id );
-    if ( targetTerritory ) {
-        targetTerritory.troops += 1;
+        // Factor 2: Heavily penalize overstacking
+        const totalNeighborTroops = connectedTerritories.reduce(
+            (sum, neighbor) => (neighbor ? sum + neighbor.troops : sum),
+            0
+        );
+        const neighborTroopAvg = totalNeighborTroops / connectedTerritories.length || 0;
+        const overstackDifference = aiTerritory.troops - neighborTroopAvg;
+
+        if (overstackDifference > 0) {
+            // Quadratic penalty for overstacking
+            priorityScore -= cling * (overstackDifference ** 2);
+        }
+
+        // Factor 3: Continent control - Bonus for nearly controlled continents
+        const continentTerritories = territories.filter(t => t.continent === territoryData.continent);
+        const ownedInContinent = continentTerritories.filter(t => gameStateTerritories.find(gt => gt.id === t.id && gt.owner === teamId)).length;
+
+        const remainingTerritories = continentTerritories.length - ownedInContinent;
+        if (remainingTerritories <= 2) {
+            priorityScore += cling * 3; // High bonus for near-continent control
+        } else if (remainingTerritories <= 4) {
+            priorityScore += cling; // Smaller bonus
+        }
+
+        // Factor 4: Random variability
+        priorityScore += Math.random() * 2;
+
+        // Decide if this territory has the highest priority score so far
+        if (priorityScore > maxPriority) {
+            bestTerritory = aiTerritory;
+            maxPriority = priorityScore;
+        }
+    });
+
+    // Place the troop on the best territory (if one was found)
+    if (bestTerritory) {
+        bestTerritory.troops += 1;
     }
 }
+
 
 function attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
     const { aggressive, cling } = personality;
