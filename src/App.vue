@@ -21,6 +21,10 @@
               <input type="checkbox" v-model="team.player">
             </div>
           </div>
+          <br>
+          <div>
+            Starting Troops: <input type="number" v-model="startingTroops">
+          </div>
         </div>
         <div id="gameLog" v-if="['place', 'play', 'end'].includes(gameState)">
           <p v-for="message in gameLog">
@@ -79,6 +83,7 @@
       </div>
       <br>
       <br>
+      AI Speed: <input type="text" v-model="AISpeed">
     </div>
   </div>
 </template>
@@ -157,7 +162,6 @@ export default {
         { name: "Peach", color: "rgba(255, 218, 185, 0.6)", enabled: false, player: false },
         { name: "Honeydew", color: "rgba(240, 255, 240, 0.6)", enabled: false, player: false },
         { name: "Coral", color: "rgba(255, 127, 80, 0.6)", enabled: false, player: false }
-
       ],
       canvas: undefined,
       ctx: {},
@@ -176,7 +180,9 @@ export default {
       attackButtonResolve: () => {
       },
       moveButtonResolve: () => {
-      }
+      },
+      AISpeed: 100,
+      startingTroops: 40
     }
   },
   computed: {
@@ -274,7 +280,7 @@ export default {
               AI.moveTroops( this.gameData.territories, territories, team.id, team.personality );
               this.drawMap();
               this.incrementTurn();
-              setTimeout( this.nextTurn, 250 );
+              setTimeout( this.nextTurn, this.AISpeed );
             } else {
               //place
               this.UImode = 'place';
@@ -510,7 +516,7 @@ export default {
       randomizeTerritories( this.teams, this.gameData.territories );
       this.drawMap();
       this.teams.forEach( team => {
-        team.freeTroops = 40 - this.gameData.territories
+        team.freeTroops = this.startingTroops - this.gameData.territories
             .reduce( ( sum, t ) => sum + ( t.owner === team.id ? t.troops : 0 ), 0 )
       } );
     },

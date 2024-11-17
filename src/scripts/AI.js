@@ -41,9 +41,9 @@ function placeTroop( gameStateTerritories, territories, teamId, personality ) {
                 if ( neighbor.owner !== teamId ) {
                     const troopDifference = aiTerritory.troops - neighbor.troops;
                     if ( troopDifference > 0 ) {
-                        priorityScore += ( aggressive * troopDifference ); // Aggression boosts attack potential
+                        priorityScore += (aggressive * troopDifference); // Aggression boosts attack potential
                     } else {
-                        priorityScore += ( cling * Math.abs( troopDifference ) ); // Clinginess boosts defense
+                        priorityScore += (cling * Math.abs( troopDifference )); // Clinginess boosts defense
                     }
 
                     // Factor 5: Single troop attack bonus
@@ -56,7 +56,7 @@ function placeTroop( gameStateTerritories, territories, teamId, personality ) {
 
         // Factor 2: Heavily penalize overstacking
         const totalNeighborTroops = connectedTerritories.reduce(
-            ( sum, neighbor ) => ( neighbor ? sum + neighbor.troops : sum ),
+            ( sum, neighbor ) => (neighbor ? sum + neighbor.troops : sum),
             0
         );
         const neighborTroopAvg = totalNeighborTroops / connectedTerritories.length || 0;
@@ -64,7 +64,7 @@ function placeTroop( gameStateTerritories, territories, teamId, personality ) {
 
         if ( overstackDifference > 0 ) {
             // Quadratic penalty for overstacking
-            priorityScore -= cling * ( overstackDifference ** 2 );
+            priorityScore -= cling * (overstackDifference ** 2);
         }
 
         // Factor 3: Continent control - Bonus for nearly controlled continents
@@ -96,10 +96,17 @@ function placeTroop( gameStateTerritories, territories, teamId, personality ) {
 
 
 function attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
-    const { aggressive, cling } = personality;
+    const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
+
+    const totalTroops = ownedTerritories.reduce( ( sum, t ) => sum + t.troops, 0 );
+
+    const cling = personality.cling;
+    //const aggressive = personality.aggressive + Math.floor( totalTroops / 50 ) * (totalTroops / 500);
+    const aggressive = personality.aggressive + (2 ** Math.floor( totalTroops / 50 ) - 1) * .1;
+    //const aggressive = personality.aggressive
 
     // Prepare for optimization
-    const territoryMap = new Map( territories.map( t => [ t.id, t ] ) );
+    const territoryMap = new Map( territories.map( t => [t.id, t] ) );
     const continentMap = getContinentTerritories( territories );
 
     // Helper functions...
@@ -129,8 +136,6 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
         return supportingNeighbors;
     }
 
-    const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
-
     // Attack options
     const attackOptions = [];
     ownedTerritories.forEach( attacker => {
@@ -141,17 +146,17 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
             if ( target.owner !== teamId ) {
                 // Desirability calculation...
                 const troopDifference = attacker.troops - target.troops;
-                const offensiveScore = aggressive * troopDifference;
-                const defensiveRisk = ( 1 - cling ) * Math.pow( target.troops, 0.8 );
-                const priorAggressionPenalty = turnStats.territoriesWon * ( 1 - aggressive );
-                const consolidationBonus = isContinentTarget( targetId, ownedTerritories ) ? ( 4 * aggressive ) : 0;
-                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId, ownedTerritories ) * ( aggressive + .2 );
-                const gapBonus = troopDifference >= 8 ? ( 8 * Math.min( 1, aggressive * .33 ) ) : 0;
+                const offensiveScore = aggressive * ((troopDifference <= 0 && troopDifference > -2) ? ((troopDifference + 3) / 8) : troopDifference);
+                const defensiveRisk = (1 - cling) * Math.min( target.troops, 20 );
+                const priorAggressionPenalty = turnStats.territoriesWon * (1 - aggressive);
+                const consolidationBonus = isContinentTarget( targetId, ownedTerritories ) ? (4 * aggressive) : 0;
+                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId, ownedTerritories ) * (aggressive + .2);
+                const gapBonus = troopDifference >= 8 ? (8 * Math.min( 1, aggressive * .33 )) : 0;
 
                 // Get support from neighboring territories
                 const supportingNeighbors = getSupportingNeighbors( attacker.id, targetId, ownedTerritories );
                 const supportingTroops = supportingNeighbors.reduce( ( total, neighbor ) => total + neighbor.troops, 0 );
-                const multiTerritoryBonus = supportingTroops > 0 ? ( supportingTroops * 0.3 * aggressive ) : 0; // Boost if there are supporting troops
+                const multiTerritoryBonus = supportingTroops > 0 ? (supportingTroops * 0.3 * aggressive) : 0; // Boost if there are supporting troops
 
                 let desirability = offensiveScore - defensiveRisk - priorAggressionPenalty + consolidationBonus + connectedOwnedBonus + gapBonus + multiTerritoryBonus;
 
@@ -178,7 +183,7 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
         return { willAttack: false, attackFrom: null, attackTo: null, troops: 0, attempts: 0 };
     }
 
-    const baseTroops = Math.max( 1, Math.floor( bestAttack.troopDifference * ( aggressive + .5 ) ) );
+    const baseTroops = Math.max( 1, Math.floor( bestAttack.troopDifference * (aggressive + .5) ) );
     const troopsToUse = Math.min( baseTroops, bestAttack.attackerTroops - 1 );
 
     const attempts = aggressive > 0.7 ? -1 : Math.ceil( troopsToUse / 2 );
@@ -204,8 +209,8 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
     }
 
     // Precompute territory connections and vulnerability data for faster lookup
-    const territoryMap = new Map( gameStateTerritories.map( t => [ t.id, t ] ) );
-    const connectionMap = new Map( territories.map( t => [ t.id, t.connections ] ) );
+    const territoryMap = new Map( gameStateTerritories.map( t => [t.id, t] ) );
+    const connectionMap = new Map( territories.map( t => [t.id, t.connections] ) );
     const vulnerabilityCache = new Map();
     const overstackPenaltyCache = new Map();
 
@@ -215,7 +220,7 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
     function precomputePaths() {
         function bfs( startId ) {
             const visited = new Set();
-            const queue = [ startId ];
+            const queue = [startId];
             const paths = new Map();
             visited.add( startId );
             paths.set( startId, true ); // A territory has a path to itself
@@ -378,7 +383,7 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
 
                 // New Factor: Encourage spreading out troops to less populated territories
                 if ( target.troops < source.troops ) {
-                    priorityScore += aggressive * ( source.troops - target.troops ); // Favor moving to weaker territories
+                    priorityScore += aggressive * (source.troops - target.troops); // Favor moving to weaker territories
                 }
 
                 // Check if this move is better than the current best
