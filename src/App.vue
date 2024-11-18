@@ -116,6 +116,8 @@ canvas {
 <script>
 import { AI, randomPersonality } from "@/scripts/AI.js";
 import { maps } from "@/maps/maps.js";
+import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_helper";
+import { getClickedPolygonIndex, drawPathFromPoints } from "@/scripts/canvas_helper";
 
 let territories, territoryPolygons, continents, mapDecoration;
 
@@ -398,7 +400,7 @@ export default {
                   }
                   if ( this.playerAttack.from !== null &&
                       this.playerAttack.to !== null &&
-                      hasPath( this.gameData.territories, this.currentTeam, this.playerAttack.from, this.playerAttack.to ) ) {
+                      hasPath( this.gameData.territories, territories, this.currentTeam, this.playerAttack.from, this.playerAttack.to ) ) {
                     const troopsToMove = Math.min( this.gameData.territories[this.playerAttack.from].troops - 1, this.playerAttack.troops );
                     this.gameData.territories[this.playerAttack.from].troops -= troopsToMove;
                     this.gameData.territories[this.playerAttack.to].troops += troopsToMove;
@@ -462,13 +464,7 @@ export default {
       ctx.clearRect( 0, 0, canvas.width, canvas.height )
 
       mapDecoration.background.forEach( a => {
-        const points = a.points;
-        ctx.beginPath();
-        ctx.moveTo( points[0][0], points[0][1] );
-        for ( let i = 1; i < points.length; i++ ) {
-          ctx.lineTo( points[i][0], points[i][1] );
-        }
-        ctx.closePath();
+        drawPathFromPoints( ctx, a.points );
         ctx.fillStyle = a.fill;
         ctx.fill();
       } );
@@ -476,14 +472,7 @@ export default {
       // Draw territories
       this.gameData.territories.forEach( t => {
         const territory = territories[t.id];
-        const points = territoryPolygons[t.id];
-        // Draw territory polygon
-        ctx.beginPath();
-        ctx.moveTo( points[0][0], points[0][1] );
-        for ( let i = 1; i < points.length; i++ ) {
-          ctx.lineTo( points[i][0], points[i][1] );
-        }
-        ctx.closePath();
+        drawPathFromPoints( ctx, territoryPolygons[t.id] );
         ctx.fillStyle = this.teams[t.owner]?.color || "white";
         ctx.fill();
         ctx.strokeStyle = this.continentColors[territory.continent] || "black";
@@ -572,153 +561,4 @@ export default {
     this.ctx = this.canvas.getContext( '2d' );
   }
 }
-
-function randomizeTerritories( teams, territories ) {
-  // Create an array of territory IDs and shuffle it
-  const shuffledIndices = [...territories.keys()].sort( () => Math.random() - 0.5 );
-
-  // Assign territories to teams in a round-robin fashion
-  let teamIndex = 0;
-  shuffledIndices.forEach( ( index ) => {
-    territories[index].owner = teams[teamIndex].id; // Assign team ID as the owner
-    territories[index].troops = 1; // Each territory starts with 1 troop
-    teamIndex = (teamIndex + 1) % teams.length; // Cycle through the teams
-  } );
-}
-
-function executeAttack( gameStateTerritories, attackDetails ) {
-  const { attackFrom, attackTo, troops, attempts } = attackDetails;
-
-  const attacker = gameStateTerritories.find( t => t.id === attackFrom );
-  const defender = gameStateTerritories.find( t => t.id === attackTo );
-
-  if ( !attacker || !defender ) {
-    console.error( "Invalid territory IDs" );
-    return null;
-  }
-
-  if ( attacker.troops <= 1 || troops > attacker.troops - 1 ) {
-    console.error( "Not enough troops to attack" );
-    return null;
-  }
-
-  let attackingTroops = Math.min( troops, attacker.troops - 1 ); // Can only commit troops-1 for attack
-  let defendingTroops = defender.troops;
-
-  let attackRounds = 0;
-  let attackerLosses = 0;
-  let defenderLosses = 0;
-
-  // Run attack rounds
-  while ( attackingTroops > 0 && defendingTroops > 0 ) {
-    // Limit rounds if attempts is not -1
-    if ( attempts !== -1 && attackRounds >= attempts ) break;
-
-    attackRounds++;
-
-    // Determine number of dice rolls
-    const attackerDiceCount = Math.min( attackingTroops, 3 ); // Max 3 dice for attacker
-    const defenderDiceCount = Math.min( defendingTroops, 2 ); // Max 2 dice for defender
-
-    // Roll dice
-    const attackerRolls = Array.from( { length: attackerDiceCount }, () => Math.floor( Math.random() * 6 ) + 1 ).sort( ( a, b ) => b - a );
-    const defenderRolls = Array.from( { length: defenderDiceCount }, () => Math.floor( Math.random() * 6 ) + 1 ).sort( ( a, b ) => b - a );
-
-    // Compare rolls
-    for ( let i = 0; i < Math.min( attackerRolls.length, defenderRolls.length ); i++ ) {
-      if ( attackerRolls[i] > defenderRolls[i] ) {
-        defendingTroops--; // Defender loses a troop
-        defenderLosses++;
-      } else {
-        attackingTroops--; // Attacker loses a troop
-        attackerLosses++;
-      }
-    }
-  }
-
-  if ( defendingTroops < 0 ) {
-    defendingTroops = 0;
-  }
-  if ( attackingTroops < 0 ) {
-    attackingTroops = 0;
-  }
-
-  // Update game state
-  attacker.troops -= troops - attackingTroops; // Deduct lost attacking troops
-  defender.troops = defendingTroops;
-
-  let attackerWon = false;
-
-  // Handle territory capture
-  if ( defendingTroops === 0 ) {
-    defender.owner = attacker.owner; // Change ownership
-    defender.troops = attackingTroops; // Move remaining attacking troops into captured territory
-    attacker.troops -= attackingTroops; // Remaining attacking troops move
-    attackerWon = true;
-  }
-
-  return {
-    attackerLosses,
-    defenderLosses,
-    attackerWon
-  };
-}
-
-function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = new Set() ) {
-  if ( sourceId === targetId ) return true;
-  visited.add( sourceId );
-  const sourceTerritory = territories[sourceId];
-  const neighbors = sourceTerritory.connections.filter( connId => {
-    const neighbor = gameStateTerritories.find( t => t.id === connId );
-    return neighbor.owner === teamId && !visited.has( connId );
-  } );
-
-  return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
-}
-
-async function getClickedPolygonIndex( canvas, polygons ) {
-  return new Promise( ( resolve ) => {
-    function isPointInPolygon( point, polygon ) {
-      let [x, y] = point;
-      let inside = false;
-
-      for ( let i = 0, j = polygon.length - 1; i < polygon.length; j = i++ ) {
-        let [xi, yi] = polygon[i];
-        let [xj, yj] = polygon[j];
-        let intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-
-        if ( intersect ) inside = !inside;
-      }
-      return inside;
-    }
-
-    function handleClick( event ) {
-      const rect = canvas.getBoundingClientRect();
-
-      // Get the scale factors for the canvas (accounting for CSS scaling)
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-
-      // Calculate the mouse position within the canvas, adjusting for any scaling
-      const clickX = (event.clientX - rect.left) * scaleX;
-      const clickY = (event.clientY - rect.top) * scaleY;
-
-      console.log(clickX, clickY);
-
-      // Loop through each polygon to check if the point is inside
-      for ( let i = 0; i < polygons.length; i++ ) {
-        if ( isPointInPolygon( [clickX, clickY], polygons[i] ) ) {
-          canvas.removeEventListener( "click", handleClick );
-          resolve( i );
-          return;
-        }
-      }
-
-      return null;
-    }
-
-    canvas.addEventListener( "click", handleClick );
-  });
-}
-
 </script>
