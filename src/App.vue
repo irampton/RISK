@@ -25,6 +25,14 @@
           <div>
             Starting Troops: <input type="number" v-model="startingTroops">
           </div>
+          <div>
+            Map:
+            <select v-model="selectedMap">
+              <option v-for="map in mapList" :key="map.id" :value="map.id">
+                {{ map.name }}
+              </option>
+            </select>
+          </div>
         </div>
         <div id="gameLog" v-if="['place', 'play', 'end'].includes(gameState)">
           <p v-for="message in gameLog">
@@ -35,7 +43,7 @@
       </div>
     </div>
     <div style="text-align: center; width: 66%">
-      <canvas id="gameCanvas" width="968" height="656"></canvas>
+      <canvas id="gameCanvas" :width="canvasSize.width" :height="canvasSize.height" style="width: 95%"></canvas>
       <br>
       <div style="display: flex; flex-direction: row; width: 100%; justify-content: space-between">
         <div style="width: 20%; padding-left: 50px">
@@ -106,12 +114,10 @@ canvas {
 </style>
 
 <script>
-import { AI, hasPath, randomPersonality } from "@/scripts/AI.js";
-import {
-  territories,
-  territoryPolygons,
-  continents
-} from "@/scripts/territories.js"
+import { AI, randomPersonality } from "@/scripts/AI.js";
+import { maps } from "@/maps/maps.js";
+
+let territories, territoryPolygons, continents, mapDecoration;
 
 export default {
   name: "RISK",
@@ -169,7 +175,7 @@ export default {
       teams: [],
       gameLog: [],
       gameData: {
-        territories: territories.map( t => ( { id: t.id, owner: null, troops: 0 } ) )
+        territories: []
       },
       currentTeam: 0,
       UImode: undefined,
@@ -182,7 +188,13 @@ export default {
       moveButtonResolve: () => {
       },
       AISpeed: 100,
-      startingTroops: 40
+      startingTroops: 40,
+      selectedMap: Object.keys( maps )[0],
+      canvasSize: {
+        width: 1000,
+        height: 700
+      },
+      continentColorOrder: ["yellow", "orange", "blue", "red", "forestgreen", "purple", "aqua", "coral", "lightgreen", "violet"]
     }
   },
   computed: {
@@ -195,6 +207,15 @@ export default {
         case 'ready':
           return "Run Game";
       }
+    },
+    mapList() {
+      return Object.keys( maps ).map( m => ({
+        name: maps[m].name,
+        id: m
+      }) )
+    },
+    continentColors() {
+      return Object.fromEntries( (continents || []).map( ( c, i ) => [c.name, this.continentColorOrder[i % this.continentColorOrder.length]] ) );
     }
   },
   methods: {
@@ -245,7 +266,7 @@ export default {
             return;
           } else {
             team.freeTroops = this.numberOfTroopsToPLace( this.currentTeam );
-            this.addToGameLog( this.currentTeam, `starts their turn by placing ${ team.freeTroops } troops` );
+            this.addToGameLog( this.currentTeam, `starts their turn by placing ${team.freeTroops} troops` );
             if ( !team.player ) {
               //place phase
               while ( team.freeTroops > 0 ) {
@@ -262,12 +283,12 @@ export default {
               do {
                 let attack = AI.attack( this.gameData.territories, territories, team.id, team.personality, turnStats );
                 if ( attack.willAttack ) {
-                  this.addToGameLog( this.currentTeam, `will attack ${ territories[attack.attackTo].name } from ${ territories[attack.attackFrom].name } with ${ attack.troops } troops` );
+                  this.addToGameLog( this.currentTeam, `will attack ${territories[attack.attackTo].name} from ${territories[attack.attackFrom].name} with ${attack.troops} troops` );
                   let results = executeAttack( this.gameData.territories, attack );
                   turnStats.troopsLost += results.attackerLosses;
                   turnStats.troopsKilled += results.defenderLosses;
                   if ( results.attackerWon ) {
-                    this.addToGameLog( this.currentTeam, `has conquered ${ territories[attack.attackFrom].name }` );
+                    this.addToGameLog( this.currentTeam, `has conquered ${territories[attack.attackFrom].name}` );
                     turnStats.territoriesWon++;
                   }
                 } else {
@@ -275,7 +296,7 @@ export default {
                 }
                 this.drawMap();
               } while ( attackAgain )
-              this.addToGameLog( this.currentTeam, `will end their turn conquering ${ turnStats.territoriesWon } territories, killing ${ turnStats.troopsKilled } troops, and loosing ${ turnStats.troopsLost } troops` );
+              this.addToGameLog( this.currentTeam, `will end their turn conquering ${turnStats.territoriesWon} territories, killing ${turnStats.troopsKilled} troops, and loosing ${turnStats.troopsLost} troops` );
               //move phase
               AI.moveTroops( this.gameData.territories, territories, team.id, team.personality );
               this.drawMap();
@@ -344,12 +365,12 @@ export default {
                     troops: troopsToUse,
                     attempts: this.playerAttack.rounds
                   };
-                  this.addToGameLog( this.currentTeam, `will attack ${ territories[attack.attackTo].name } from ${ territories[attack.attackFrom].name } with ${ attack.troops } troops` );
+                  this.addToGameLog( this.currentTeam, `will attack ${territories[attack.attackTo].name} from ${territories[attack.attackFrom].name} with ${attack.troops} troops` );
                   let results = executeAttack( this.gameData.territories, attack );
                   turnStats.troopsLost += results.attackerLosses;
                   turnStats.troopsKilled += results.defenderLosses;
                   if ( results.attackerWon ) {
-                    this.addToGameLog( this.currentTeam, `has conquered ${ territories[attack.attackFrom].name }` );
+                    this.addToGameLog( this.currentTeam, `has conquered ${territories[attack.attackFrom].name}` );
                     turnStats.territoriesWon++;
                     this.playerAttack.to = null;
                   }
@@ -357,7 +378,7 @@ export default {
                 this.playerAttack.rounds = null;
                 this.drawMap();
               } while ( !this.playerAttack.done )
-              this.addToGameLog( this.currentTeam, `will end their turn conquering ${ turnStats.territoriesWon } territories, killing ${ turnStats.troopsKilled } troops, and loosing ${ turnStats.troopsLost } troops` );
+              this.addToGameLog( this.currentTeam, `will end their turn conquering ${turnStats.territoriesWon} territories, killing ${turnStats.troopsKilled} troops, and loosing ${turnStats.troopsLost} troops` );
               //move
               this.UImode = 'move';
               this.playerAttack = {
@@ -426,23 +447,31 @@ export default {
         const ownsAllTerritories = continent.territories.every(
             territoryID => this.gameData.territories.find( t => t.id === territoryID )?.owner === teamID
         );
-        return totalBonus + ( ownsAllTerritories ? continent.bonus : 0 );
+        return totalBonus + (ownsAllTerritories ? continent.bonus : 0);
       }, 0 );
 
       // Total troops
       return baseTroops + continentBonuses;
     },
     incrementTurn() {
-      this.currentTeam = ( this.currentTeam + 1 ) % this.teams.length;
+      this.currentTeam = (this.currentTeam + 1) % this.teams.length;
     },
     drawMap() {
       const ctx = this.ctx;
       const canvas = this.canvas;
-      ctx.clearRect( 0, 0, canvas.width, canvas.height );
+      ctx.clearRect( 0, 0, canvas.width, canvas.height )
 
-      // Draw background (placeholder for a map image)
-      ctx.fillStyle = "#D3E6F3"; // Ocean blue
-      ctx.fillRect( 0, 0, canvas.width, canvas.height );
+      mapDecoration.background.forEach( a => {
+        const points = a.points;
+        ctx.beginPath();
+        ctx.moveTo( points[0][0], points[0][1] );
+        for ( let i = 1; i < points.length; i++ ) {
+          ctx.lineTo( points[i][0], points[i][1] );
+        }
+        ctx.closePath();
+        ctx.fillStyle = a.fill;
+        ctx.fill();
+      } );
 
       // Draw territories
       this.gameData.territories.forEach( t => {
@@ -457,52 +486,50 @@ export default {
         ctx.closePath();
         ctx.fillStyle = this.teams[t.owner]?.color || "white";
         ctx.fill();
-        if ( territory.continent == "North America" ) {
-          ctx.strokeStyle = "yellow";
-        } else if ( territory.continent == "South America" ) {
-          ctx.strokeStyle = "orange";
-        } else if ( territory.continent == "Europe" ) {
-          ctx.strokeStyle = "blue";
-        } else if ( territory.continent == "Africa" ) {
-          ctx.strokeStyle = "red";
-        } else if ( territory.continent == "Asia" ) {
-          ctx.strokeStyle = "green";
-        } else if ( territory.continent == "Australia" ) {
-          ctx.strokeStyle = "purple";
-        } else {
-          ctx.strokeStyle = "black";
-        }
+        ctx.strokeStyle = this.continentColors[territory.continent] || "black";
+        ctx.lineWidth = 1.25;
         ctx.stroke();
+      } );
 
+      this.gameData.territories.forEach( t => {
+        const territory = territories[t.id];
+        const points = territoryPolygons[t.id];
         // Calculate center of polygon for text
         const centerX = points.reduce( ( sum, p ) => sum + p[0], 0 ) / points.length;
         const centerY = points.reduce( ( sum, p ) => sum + p[1], 0 ) / points.length;
         // Draw territory name
-        ctx.fillStyle = "black";
-        ctx.font = "10px Arial";
+        ctx.fillStyle = this.continentColors[territory.continent] || "white";
+        ctx.font = "12px 'Segoe UI'";
         ctx.textAlign = "center";
+        ctx.strokeStyle = "rgba(0,0,0,.3)";
+        ctx.lineWidth = 1.25;
+        ctx.strokeText( territory.name, centerX + 1, centerY - 9 );
         ctx.fillText( territory.name, centerX, centerY - 10 );
 
         // Draw troop count
         ctx.fillStyle = "white";
-        ctx.font = "12px Arial";
+        ctx.font = "14px 'Segoe UI'";
+        ctx.strokeStyle = "rgba(0,0,0,.25)";
+        ctx.lineWidth = 1.25;
+        ctx.strokeText( t.troops, centerX + 1, centerY + 6 );
         ctx.fillText( t.troops, centerX, centerY + 5 );
       } );
     },
     beginGame( sameTeams = false ) {
+      //teams set up
       if ( sameTeams ) {
         this.teams = this.teams
             .sort( () => Math.random() - 0.5 )
-            .map( ( t, i ) => ( {
+            .map( ( t, i ) => ({
               ...t,
               id: i,
               freeTroops: 0
-            } ) );
+            }) );
       } else {
         this.teams = this.possibleTeams
             .filter( t => t.enabled )
             .sort( () => Math.random() - 0.5 )
-            .map( ( t, i ) => ( {
+            .map( ( t, i ) => ({
               ...t,
               id: i,
               freeTroops: 0,
@@ -510,14 +537,24 @@ export default {
                   t.player
                       ? undefined
                       : AI.personalities[t.name] || randomPersonality()
-            } ) );
+            }) );
       }
-      //console.log(JSON.parse(JSON.stringify(this.teams)));
+
+      //map setup
+      this.territories = territories = maps[this.selectedMap].territories;
+      territoryPolygons = maps[this.selectedMap].territoryPolygons;
+      continents = maps[this.selectedMap].continents;
+      mapDecoration = maps[this.selectedMap].mapDecoration;
+      this.canvasSize.height = mapDecoration.height;
+      this.canvasSize.width = mapDecoration.width;
+      this.gameData.territories = territories.map( t => ({ id: t.id, owner: null, troops: 0 }) )
+
+      //console.log( JSON.parse( JSON.stringify( this.teams ) ) );
       randomizeTerritories( this.teams, this.gameData.territories );
-      this.drawMap();
+      this.$nextTick( this.drawMap );
       this.teams.forEach( team => {
         team.freeTroops = this.startingTroops - this.gameData.territories
-            .reduce( ( sum, t ) => sum + ( t.owner === team.id ? t.troops : 0 ), 0 )
+            .reduce( ( sum, t ) => sum + (t.owner === team.id ? t.troops : 0), 0 )
       } );
     },
     playAgainButton( sameTeams = false ) {
@@ -538,14 +575,14 @@ export default {
 
 function randomizeTerritories( teams, territories ) {
   // Create an array of territory IDs and shuffle it
-  const shuffledIndices = [ ...territories.keys() ].sort( () => Math.random() - 0.5 );
+  const shuffledIndices = [...territories.keys()].sort( () => Math.random() - 0.5 );
 
   // Assign territories to teams in a round-robin fashion
   let teamIndex = 0;
   shuffledIndices.forEach( ( index ) => {
     territories[index].owner = teams[teamIndex].id; // Assign team ID as the owner
     territories[index].troops = 1; // Each territory starts with 1 troop
-    teamIndex = ( teamIndex + 1 ) % teams.length; // Cycle through the teams
+    teamIndex = (teamIndex + 1) % teams.length; // Cycle through the teams
   } );
 }
 
@@ -627,16 +664,28 @@ function executeAttack( gameStateTerritories, attackDetails ) {
   };
 }
 
+function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = new Set() ) {
+  if ( sourceId === targetId ) return true;
+  visited.add( sourceId );
+  const sourceTerritory = territories[sourceId];
+  const neighbors = sourceTerritory.connections.filter( connId => {
+    const neighbor = gameStateTerritories.find( t => t.id === connId );
+    return neighbor.owner === teamId && !visited.has( connId );
+  } );
+
+  return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
+}
+
 async function getClickedPolygonIndex( canvas, polygons ) {
   return new Promise( ( resolve ) => {
     function isPointInPolygon( point, polygon ) {
-      let [ x, y ] = point;
+      let [x, y] = point;
       let inside = false;
 
       for ( let i = 0, j = polygon.length - 1; i < polygon.length; j = i++ ) {
-        let [ xi, yi ] = polygon[i];
-        let [ xj, yj ] = polygon[j];
-        let intersect = yi > y !== yj > y && x < ( ( xj - xi ) * ( y - yi ) ) / ( yj - yi ) + xi;
+        let [xi, yi] = polygon[i];
+        let [xj, yj] = polygon[j];
+        let intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
 
         if ( intersect ) inside = !inside;
       }
@@ -645,11 +694,20 @@ async function getClickedPolygonIndex( canvas, polygons ) {
 
     function handleClick( event ) {
       const rect = canvas.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const clickY = event.clientY - rect.top;
 
+      // Get the scale factors for the canvas (accounting for CSS scaling)
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      // Calculate the mouse position within the canvas, adjusting for any scaling
+      const clickX = (event.clientX - rect.left) * scaleX;
+      const clickY = (event.clientY - rect.top) * scaleY;
+
+      console.log(clickX, clickY);
+
+      // Loop through each polygon to check if the point is inside
       for ( let i = 0; i < polygons.length; i++ ) {
-        if ( isPointInPolygon( [ clickX, clickY ], polygons[i] ) ) {
+        if ( isPointInPolygon( [clickX, clickY], polygons[i] ) ) {
           canvas.removeEventListener( "click", handleClick );
           resolve( i );
           return;
@@ -660,6 +718,7 @@ async function getClickedPolygonIndex( canvas, polygons ) {
     }
 
     canvas.addEventListener( "click", handleClick );
-  } );
+  });
 }
+
 </script>

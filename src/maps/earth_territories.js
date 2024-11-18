@@ -1,5 +1,5 @@
 // Territories data (simplified polygons and layout)
-export const territories = [
+const territories = [
     //North America
     { "id": 0, "name": "Alaska", "connections": [ 1, 3, 29 ], "continent": "North America" },
     { "id": 1, "name": "Northwest Territory", "connections": [ 0, 2, 3, 4 ], "continent": "North America" },
@@ -50,10 +50,10 @@ export const territories = [
     { "id": 41, "name": "Eastern Australia", "connections": [ 39, 40 ], "continent": "Australia" }
 ];
 
-import { territoryPolygons as TP } from "@/scripts/polygons.js";
+import { territoryPolygons as TP, mapDecoration } from "@/maps/earth_polygons.js";
 
-export const territoryPolygons = TP.map( a => a.length === 4 ? a : a.map( b => b.map( c => c * 6.5 - 6.5 ) ) );
-export const continents = [
+const territoryPolygons = TP.map( a => a.length === 4 ? a : a.map( b => b.map( c => c * 6.5 - 6.5 ) ) );
+const continents = [
     {
         name: "North America",
         territories: [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ],
@@ -85,3 +85,10 @@ export const continents = [
         bonus: 2
     }
 ];
+
+export const earth = {
+    territories,
+    territoryPolygons,
+    continents,
+    mapDecoration
+}

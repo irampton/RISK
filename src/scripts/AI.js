@@ -1,5 +1,3 @@
-import { territories } from "@/scripts/territories.js";
-
 const personalities = {
     "Red": { "aggressive": normalRandom( .95, 0.15 ), "cling": normalRandom( 0.02, 0.01 ) },
     "Orange": { "aggressive": normalRandom( 0.325, 0.08 ), "cling": normalRandom( 0.1, 0.05 ) },
@@ -418,19 +416,6 @@ function getContinentTerritories( territories ) {
     } );
 
     return continentMap;
-}
-
-
-export function hasPath( gameStateTerritories, teamId, sourceId, targetId, visited = new Set() ) {
-    if ( sourceId === targetId ) return true;
-    visited.add( sourceId );
-    const sourceTerritory = territories[sourceId];
-    const neighbors = sourceTerritory.connections.filter( connId => {
-        const neighbor = gameStateTerritories.find( t => t.id === connId );
-        return neighbor.owner === teamId && !visited.has( connId );
-    } );
-
-    return neighbors.some( neighborId => hasPath( gameStateTerritories, teamId, neighborId, targetId, visited ) );
 }
 
 export function randomPersonality() {
