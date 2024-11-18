@@ -117,7 +117,7 @@ canvas {
 import { AI, randomPersonality } from "@/scripts/AI.js";
 import { maps } from "@/maps/maps.js";
 import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_helper";
-import { getClickedPolygonIndex, drawPathFromPoints } from "@/scripts/canvas_helper";
+import { getClickedPolygonIndex, drawPathFromPoints, calculatePolygonCenter } from "@/scripts/canvas_helper";
 
 let territories, territoryPolygons, continents, mapDecoration;
 
@@ -218,7 +218,10 @@ export default {
     },
     continentColors() {
       return Object.fromEntries( (continents || []).map( ( c, i ) => [c.name, this.continentColorOrder[i % this.continentColorOrder.length]] ) );
-    }
+    },
+    territoryCenters(){
+      return this.territories.map(t => calculatePolygonCenter(territoryPolygons[t.id]));
+}
   },
   methods: {
     async nextTurn() {
@@ -482,26 +485,43 @@ export default {
 
       this.gameData.territories.forEach( t => {
         const territory = territories[t.id];
-        const points = territoryPolygons[t.id];
-        // Calculate center of polygon for text
-        const centerX = points.reduce( ( sum, p ) => sum + p[0], 0 ) / points.length;
-        const centerY = points.reduce( ( sum, p ) => sum + p[1], 0 ) / points.length;
+        const [centerX, centerY] = this.territoryCenters[t.id];
+
         // Draw territory name
         ctx.fillStyle = this.continentColors[territory.continent] || "white";
         ctx.font = "12px 'Segoe UI'";
         ctx.textAlign = "center";
         ctx.strokeStyle = "rgba(0,0,0,.3)";
         ctx.lineWidth = 1.25;
-        ctx.strokeText( territory.name, centerX + 1, centerY - 9 );
-        ctx.fillText( territory.name, centerX, centerY - 10 );
+
+        // Split name into words
+        const words = territory.name.split(" ");
+        let firstWord, remainingWords;
+        if(words.length > 1) {
+          firstWord = words[0];
+          remainingWords = words.slice( 1 ).join( " " );
+        }else{
+          firstWord = false;
+          remainingWords = territory.name;
+        }
+
+        // Draw first word (if applicable)
+        if(firstWord) {
+          ctx.strokeText( firstWord, centerX + 1, centerY - 16 );
+          ctx.fillText( firstWord, centerX, centerY - 17 );
+        }
+
+        // Draw remaining words on the next line
+        ctx.strokeText(remainingWords, centerX + 1, centerY - 3);
+        ctx.fillText(remainingWords, centerX, centerY - 4);
 
         // Draw troop count
         ctx.fillStyle = "white";
         ctx.font = "14px 'Segoe UI'";
         ctx.strokeStyle = "rgba(0,0,0,.25)";
         ctx.lineWidth = 1.25;
-        ctx.strokeText( t.troops, centerX + 1, centerY + 6 );
-        ctx.fillText( t.troops, centerX, centerY + 5 );
+        ctx.strokeText(t.troops, centerX + 1, centerY + 11);
+        ctx.fillText(t.troops, centerX, centerY + 10);
       } );
     },
     beginGame( sameTeams = false ) {

@@ -51,3 +51,25 @@ export function drawPathFromPoints(ctx, points){
     }
     ctx.closePath();
 }
+
+export function calculatePolygonCenter(points) {
+    let area = 0;
+    let centroidX = 0;
+    let centroidY = 0;
+
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const [x0, y0] = points[j];
+        const [x1, y1] = points[i];
+        const cross = x0 * y1 - x1 * y0;
+
+        area += cross;
+        centroidX += (x0 + x1) * cross;
+        centroidY += (y0 + y1) * cross;
+    }
+
+    area /= 2;
+    centroidX /= (6 * area);
+    centroidY /= (6 * area);
+
+    return [centroidX, centroidY];
+}
