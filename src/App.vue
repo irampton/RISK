@@ -401,6 +401,8 @@ export default {
                 if ( typeof tID === "string" ) {
                   if ( tID === 'done' ) {
                     this.playerAttack.done = true;
+                    this.playerAttack.to = null;
+                    this.playerAttack.from = null;
                   }
                   if ( this.playerAttack.from !== null &&
                       this.playerAttack.to !== null &&
