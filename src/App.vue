@@ -114,10 +114,11 @@ canvas {
 </style>
 
 <script>
-import { AI, randomPersonality } from "@/scripts/AI.js";
+import { AI } from "@/scripts/AI.js";
 import { maps } from "@/maps/maps.js";
 import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_helper";
 import { getClickedPolygonIndex, drawPathFromPoints, calculatePolygonCenter } from "@/scripts/canvas_helper";
+import { defaultPersonalities, randomPersonality } from "@/scripts/AI_personalities.js";
 
 let territories, territoryPolygons, continents, mapDecoration;
 
@@ -545,7 +546,7 @@ export default {
               personality:
                   t.player
                       ? undefined
-                      : AI.personalities[t.name] || randomPersonality()
+                      : defaultPersonalities[t.name] || randomPersonality()
             }) );
       }
 

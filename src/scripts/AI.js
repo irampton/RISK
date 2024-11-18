@@ -1,17 +1,7 @@
-const personalities = {
-    "Red": { "aggressive": normalRandom( .95, 0.15 ), "cling": normalRandom( 0.02, 0.01 ) },
-    "Orange": { "aggressive": normalRandom( 0.325, 0.08 ), "cling": normalRandom( 0.1, 0.05 ) },
-    "Gold": { "aggressive": normalRandom( 0.25, 0.2 ), "cling": normalRandom( 0.15, 0.1 ) },
-    "Forest Green": { "aggressive": normalRandom( 0.15, 0.2 ), "cling": normalRandom( 0.5, 0.15 ) },
-    "Blue": { "aggressive": normalRandom( 0.33, 0.1 ), "cling": normalRandom( 0.05, 0.2 ) },
-    "Purple": { "aggressive": normalRandom( 0.33, 0.25 ), "cling": normalRandom( 0.6, 0.3 ) },
-}
-
 export const AI = {
     placeTroop,
     attack,
-    moveTroops,
-    personalities
+    moveTroops
 };
 
 function placeTroop( gameStateTerritories, territories, teamId, personality ) {
@@ -134,6 +124,9 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
         return supportingNeighbors;
     }
 
+    //avoid attacking if you have little troops
+    const troopToTerritoryPenalty = ( ( totalTroops / ownedTerritories.length ) < 4 ) ? ( ( 1 - aggressive ) * 10 ) : 0;
+
     // Attack options
     const attackOptions = [];
     ownedTerritories.forEach( attacker => {
@@ -156,7 +149,14 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
                 const supportingTroops = supportingNeighbors.reduce( ( total, neighbor ) => total + neighbor.troops, 0 );
                 const multiTerritoryBonus = supportingTroops > 0 ? (supportingTroops * 0.3 * aggressive) : 0; // Boost if there are supporting troops
 
-                let desirability = offensiveScore - defensiveRisk - priorAggressionPenalty + consolidationBonus + connectedOwnedBonus + gapBonus + multiTerritoryBonus;
+                let desirability = offensiveScore
+                    - defensiveRisk
+                    - priorAggressionPenalty
+                    + consolidationBonus
+                    + connectedOwnedBonus
+                    + gapBonus
+                    + multiTerritoryBonus
+                    - troopToTerritoryPenalty;
 
                 if ( target.troops <= 1 ) desirability += 10; // Favor easy targets
 
@@ -263,6 +263,9 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                 const troopDifference = neighbor.troops - territory.troops;
                 if ( troopDifference > 0 ) {
                     vulnerability += troopDifference;
+                    vulnerability += 2;
+                } else if ( troopDifference === 0 ) {
+                    vulnerability += 1;
                 }
             }
         } );
@@ -319,7 +322,7 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
 
                 // Factor 1: Protect vulnerable territories
                 const targetVulnerability = calculateVulnerability( target );
-                priorityScore += cling * targetVulnerability;
+                priorityScore += Math.min(cling + .5, 1) * targetVulnerability * 5;
 
                 // Factor 2: Avoid leaving extra troops in safe territories
                 const sourceVulnerability = calculateVulnerability( source );
@@ -340,14 +343,13 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
 
                 // Factor 4: Penalize large stacks based on troop difference with neighbors
                 const connectedTerritories = connectionMap.get( target.id ).map( id => territoryMap.get( id ) );
-                connectedTerritories.forEach( neighbor => {
-                    if ( neighbor ) {
-                        const troopDifference = target.troops - neighbor.troops;
-                        if ( troopDifference > 0 ) {
-                            priorityScore -= cling * troopDifference * .5;
-                        }
-                    }
-                } );
+                const enemyTroops = connectedTerritories
+                    .filter( neighbor => neighbor && neighbor.owner !== teamId )
+                    .reduce( ( sum, t ) => sum + t.troops, 0 );
+                const troopDifference = target.troops - enemyTroops;
+                if ( troopDifference > 0 ) {
+                    priorityScore -= (cling + .1) * troopDifference * 2;
+                }
 
                 // Factor 5: Prioritize protection for weak territories with adjacent enemy presence
                 const adjacentEnemies = connectionMap.get( target.id )
@@ -355,8 +357,8 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                     .filter( neighbor => neighbor && neighbor.owner !== teamId );
                 adjacentEnemies.forEach( enemy => {
                     const enemyTroopDifference = enemy.troops - target.troops;
-                    if ( enemyTroopDifference > 0 ) {
-                        priorityScore += cling * enemyTroopDifference;
+                    if ( enemyTroopDifference >= 0 ) {
+                        priorityScore += (cling + .25) * (enemyTroopDifference + 1) * 2.5;
                     }
                 } );
 
@@ -416,23 +418,4 @@ function getContinentTerritories( territories ) {
     } );
 
     return continentMap;
-}
-
-export function randomPersonality() {
-    return {
-        "aggressive": normalRandom( 0.33, 0.25 ),
-        "cling": normalRandom( 0.1, 0.2 )
-    }
-}
-
-function normalRandom( mean = 0.5, stdDev = 0.1 ) {
-    // Using the Box-Muller transform to generate a normal distribution
-    let u1 = Math.random();
-    let u2 = Math.random();
-
-    // Box-Muller transform
-    let z0 = Math.sqrt( -2 * Math.log( u1 ) ) * Math.cos( 2 * Math.PI * u2 );
-
-    // Return the scaled value (normal distribution)
-    return Math.min( Math.max( .01, mean + z0 * stdDev ), 1 );
 }
