@@ -61,9 +61,9 @@ function placeTroop( gameStateTerritories, territories, teamId, personality ) {
 
         const remainingTerritories = continentTerritories.length - ownedInContinent;
         if ( remainingTerritories <= 2 ) {
-            priorityScore += cling * 3; // High bonus for near-continent control
+            priorityScore += (cling + .25) * 3 + 4; // High bonus for near-continent control
         } else if ( remainingTerritories <= 4 ) {
-            priorityScore += cling; // Smaller bonus
+            priorityScore += cling * 2; // Smaller bonus
         }
 
         // Factor 4: Random variability
@@ -125,7 +125,7 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
     }
 
     //avoid attacking if you have little troops
-    const troopToTerritoryPenalty = ( ( totalTroops / ownedTerritories.length ) < 4 ) ? ( ( 1 - aggressive ) * 10 ) : 0;
+    const troopToTerritoryPenalty = ((totalTroops / ownedTerritories.length) < 4) ? ((1 - aggressive) * 10) : 0;
 
     // Attack options
     const attackOptions = [];
@@ -140,14 +140,14 @@ function attack( gameStateTerritories, territories, teamId, personality, turnSta
                 const offensiveScore = aggressive * ((troopDifference <= 0 && troopDifference > -2) ? ((troopDifference + 3) / 8) : troopDifference);
                 const defensiveRisk = (1 - cling) * Math.min( target.troops, 20 );
                 const priorAggressionPenalty = turnStats.territoriesWon * (1 - aggressive);
-                const consolidationBonus = isContinentTarget( targetId, ownedTerritories ) ? (4 * aggressive) : 0;
-                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId, ownedTerritories ) * (aggressive + .2);
+                const consolidationBonus = isContinentTarget( targetId, ownedTerritories ) ? (4 * (aggressive + .5)) : 0;
+                const connectedOwnedBonus = getConnectedOwnedTerritories( targetId, ownedTerritories ) * (aggressive + .2) * 3;
                 const gapBonus = troopDifference >= 8 ? (8 * Math.min( 1, aggressive * .33 )) : 0;
 
                 // Get support from neighboring territories
                 const supportingNeighbors = getSupportingNeighbors( attacker.id, targetId, ownedTerritories );
                 const supportingTroops = supportingNeighbors.reduce( ( total, neighbor ) => total + neighbor.troops, 0 );
-                const multiTerritoryBonus = supportingTroops > 0 ? (supportingTroops * 0.3 * aggressive) : 0; // Boost if there are supporting troops
+                const multiTerritoryBonus = supportingTroops > 0 ? (supportingTroops * 2 * aggressive) : 0; // Boost if there are supporting troops
 
                 let desirability = offensiveScore
                     - defensiveRisk
@@ -249,53 +249,6 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
         return sourcePaths ? sourcePaths.has( targetId ) : false;
     }
 
-    // Helper function to calculate vulnerability for a territory
-    function calculateVulnerability( territory ) {
-        if ( vulnerabilityCache.has( territory.id ) ) {
-            return vulnerabilityCache.get( territory.id );
-        }
-
-        const connectedTerritories = connectionMap.get( territory.id ).map( id => territoryMap.get( id ) );
-        let vulnerability = 0;
-
-        connectedTerritories.forEach( neighbor => {
-            if ( neighbor && neighbor.owner !== teamId ) {
-                const troopDifference = neighbor.troops - territory.troops;
-                if ( troopDifference > 0 ) {
-                    vulnerability += troopDifference;
-                    vulnerability += 2;
-                } else if ( troopDifference === 0 ) {
-                    vulnerability += 1;
-                }
-            }
-        } );
-
-        vulnerabilityCache.set( territory.id, vulnerability );
-        return vulnerability;
-    }
-
-    // Helper function to calculate exponential penalty for overstacking
-    function calculateExponentialPenalty( territory ) {
-        if ( overstackPenaltyCache.has( territory.id ) ) {
-            return overstackPenaltyCache.get( territory.id );
-        }
-
-        const connectedTerritories = connectionMap.get( territory.id ).map( id => territoryMap.get( id ) );
-        let penalty = 0;
-
-        connectedTerritories.forEach( neighbor => {
-            if ( neighbor ) {
-                const troopDifference = territory.troops - neighbor.troops;
-                if ( troopDifference > 3 ) {
-                    penalty += Math.exp( troopDifference / 3 );
-                }
-            }
-        } );
-
-        overstackPenaltyCache.set( territory.id, penalty );
-        return penalty;
-    }
-
     // Helper function to check if a territory is safe
     function isSafe( territory ) {
         return connectionMap.get( territory.id ).every( id => territoryMap.get( id ).owner === territory.owner );
@@ -318,16 +271,36 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                 if ( source.id === target.id ) return; // Skip if source and target are the same
                 if ( !hasPath( source.id, target.id ) ) return; // Skip if no path exists
 
+                //source troop difference
+                //If the source has a large number of troops, consider dividing them
+                const sourceConnectedTerritories = connectionMap.get( source.id ).map( id => territoryMap.get( id ) );
+                const sourceEnemyTroops = sourceConnectedTerritories
+                    .filter( neighbor => neighbor && neighbor.owner !== teamId )
+                    .reduce( ( sum, t ) => sum + t.troops, 0 );
+                const sourceTroopGap = source.troops - sourceEnemyTroops;
+
+                //target troop difference
+                const targetConnectedTerritories = connectionMap.get( target.id ).map( id => territoryMap.get( id ) );
+                const targetEnemyTroops = targetConnectedTerritories
+                    .filter( neighbor => neighbor && neighbor.owner !== teamId )
+                    .reduce( ( sum, t ) => sum + t.troops, 0 );
+                const targetTroopGap = target.troops - targetEnemyTroops;
+
                 let priorityScore = 0;
 
                 // Factor 1: Protect vulnerable territories
-                const targetVulnerability = calculateVulnerability( target );
-                priorityScore += Math.min(cling + .5, 1) * targetVulnerability * 5;
+                if ( !isSafe( target ) ) {
+                    priorityScore += Math.min( cling + .5, 1 ) * -(targetTroopGap - 1) * 5;
+                    if ( targetTroopGap < 0 ) {
+                        priorityScore += 4;
+                    } else if ( targetTroopGap === 0 ) {
+                        priorityScore += 2;
+                    }
+                }
 
                 // Factor 2: Avoid leaving extra troops in safe territories
-                const sourceVulnerability = calculateVulnerability( source );
-                if ( sourceVulnerability === 0 ) {
-                    priorityScore += aggressive * -source.troops; // Penalize leaving extra troops in safe areas
+                if ( isSafe( source ) ) {
+                    priorityScore += (aggressive + .4) * source.troops * 3; // Penalize leaving extra troops in safe areas
                 }
 
                 // Factor 3: Optimize attack potential
@@ -342,13 +315,8 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                 } );
 
                 // Factor 4: Penalize large stacks based on troop difference with neighbors
-                const connectedTerritories = connectionMap.get( target.id ).map( id => territoryMap.get( id ) );
-                const enemyTroops = connectedTerritories
-                    .filter( neighbor => neighbor && neighbor.owner !== teamId )
-                    .reduce( ( sum, t ) => sum + t.troops, 0 );
-                const troopDifference = target.troops - enemyTroops;
-                if ( troopDifference > 0 ) {
-                    priorityScore -= (cling + .1) * troopDifference * 2;
+                if ( targetTroopGap > 0 ) {
+                    priorityScore -= (cling + .1) * targetTroopGap * 5;
                 }
 
                 // Factor 5: Prioritize protection for weak territories with adjacent enemy presence
@@ -358,7 +326,7 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                 adjacentEnemies.forEach( enemy => {
                     const enemyTroopDifference = enemy.troops - target.troops;
                     if ( enemyTroopDifference >= 0 ) {
-                        priorityScore += (cling + .25) * (enemyTroopDifference + 1) * 2.5;
+                        priorityScore += (cling + .25) * (2 ** enemyTroopDifference);
                     }
                 } );
 
@@ -372,23 +340,29 @@ function moveTroops( gameStateTerritories, territories, teamId, personality ) {
                     priorityScore -= 1e10;
                 }
 
-                // **Force movement out of safe territories if reinforcement is needed**
-                if ( isSafe( source ) && calculateVulnerability( target ) ) {
-                    priorityScore += 1e4;
-                }
-
-                // Factor 7: Apply exponential penalty for overstacking
-                const overstackPenalty = calculateExponentialPenalty( target );
-                priorityScore -= overstackPenalty;
-
                 // New Factor: Encourage spreading out troops to less populated territories
                 if ( target.troops < source.troops ) {
                     priorityScore += aggressive * (source.troops - target.troops); // Favor moving to weaker territories
                 }
 
+                if ( sourceTroopGap > 2 ) {
+                    priorityScore += (cling + .25) * (2 ** (sourceTroopGap / 2));
+                }
+
+                // If the territory is not safe, do not move troops out of it unless the gap is larger than 2 * nearby enemy troops
+                if ( !isSafe( source ) && (sourceEnemyTroops * 2 > source.troops) ) {
+                    priorityScore = -Infinity;
+                }
+
                 // Check if this move is better than the current best
                 if ( priorityScore > maxPriority ) {
-                    const troopsToMove = Math.min( maxTroopsToMove, source.troops - 1 );
+                    let troopsToMove;
+                    if ( isSafe( source ) ) {
+                        troopsToMove = Math.min( maxTroopsToMove, source.troops - 1 );
+                    } else {
+                        troopsToMove = Math.min( Math.max( 1, Math.floor( source.troops - (targetTroopGap * 1.5) ) ), source.troops - 1 )
+                    }
+
                     bestMove = { source, target, troopsToMove };
                     maxPriority = priorityScore;
                     moveMadeThisRound = true;
