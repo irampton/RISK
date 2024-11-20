@@ -236,7 +236,7 @@ export default {
           if ( this.freeTroopsLeft() ) {
             if ( !team.player ) {
               if ( team.freeTroops > 0 ) {
-                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality );
+                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality, true );
                 team.freeTroops--;
               }
               this.drawMap();

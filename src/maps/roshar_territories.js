@@ -260,7 +260,7 @@ const territories = [
     {
         "id": 43,
         "name": "Northern Alethkar",
-        "connections": [18, 20, 21, 41, 45],
+        "connections": [18, 20, 27, 41, 45],
         "continent": "Alethi"
     },
     {
@@ -317,14 +317,14 @@ import { territoryPolygons, mapDecoration } from "./roshar_polygons.js";
 
 const continents = [
     {
-        name: 'Makabak',
-        territories: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        bonus: 7
-    },
-    {
         name: 'Western Roshar',
         territories: [37, 38, 39, 40],
         bonus: 2
+    },
+    {
+        name: 'Makabak',
+        territories: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        bonus: 7
     },
     {
         name: 'Iri',
