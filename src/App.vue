@@ -1,7 +1,10 @@
 <template>
   <h1 style="text-align: center;">RISK</h1>
   <div style="display: flex; flex-direction: row">
-    <div style="width: 33%">
+    <div style="width: 33%; height: calc(100vh - 10rem)">
+      <div v-if="['place', 'ready','play', 'end'].includes(gameState)">
+        <TeamStats :teams="teams" :gameData="gameData" :currentTeam="currentTeam" />
+      </div>
       <div class="log">
         <div id="gameSettings" v-if="gameState === 'initial'">
           <h3>Teams</h3>
@@ -104,7 +107,7 @@ canvas {
 }
 
 .log {
-  height: 80vh;
+  height: 80%;
   overflow-y: scroll;
   margin: .5rem;
   text-align: left;
@@ -120,12 +123,13 @@ import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_hel
 import { getClickedPolygonIndex, drawPathFromPoints, calculatePolygonCenter } from "@/scripts/canvas_helper";
 import { defaultPersonalities, randomPersonality } from "@/scripts/AI_personalities.js";
 import ContinentStats from "@/components/continentStats.vue";
+import TeamStats from "@/components/teamStats.vue";
 
 let territories, territoryPolygons, continents, mapDecoration;
 
 export default {
   name: "RISK",
-  components: { ContinentStats },
+  components: { TeamStats, ContinentStats },
   props: {},
   data() {
     return {
@@ -223,9 +227,9 @@ export default {
     continentColors() {
       return Object.fromEntries( (this.continents || []).map( ( c, i ) => [c.name, this.continentColorOrder[i % this.continentColorOrder.length]] ) );
     },
-    territoryCenters(){
-      return this.territories.map(t => calculatePolygonCenter(territoryPolygons[t.id]));
-}
+    territoryCenters() {
+      return this.territories.map( t => calculatePolygonCenter( territoryPolygons[t.id] ) );
+    }
   },
   methods: {
     async nextTurn() {
@@ -439,6 +443,7 @@ export default {
       this.gameLog.push( { teamID, text: msg } );
       this.$nextTick( () => {
         const gameLog = document.getElementById( 'gameLog' );
+        if ( !gameLog ) return;
         gameLog.parentElement.scrollTop = gameLog.scrollHeight;
       } );
     },
@@ -504,33 +509,33 @@ export default {
         ctx.lineWidth = 1.25;
 
         // Split name into words
-        const words = territory.name.split(" ");
+        const words = territory.name.split( " " );
         let firstWord, remainingWords;
-        if(words.length > 1) {
+        if ( words.length > 1 ) {
           firstWord = words[0];
           remainingWords = words.slice( 1 ).join( " " );
-        }else{
+        } else {
           firstWord = false;
           remainingWords = territory.name;
         }
 
         // Draw first word (if applicable)
-        if(firstWord) {
+        if ( firstWord ) {
           ctx.strokeText( firstWord, centerX + 1, centerY - 16 );
           ctx.fillText( firstWord, centerX, centerY - 17 );
         }
 
         // Draw remaining words on the next line
-        ctx.strokeText(remainingWords, centerX + 1, centerY - 3);
-        ctx.fillText(remainingWords, centerX, centerY - 4);
+        ctx.strokeText( remainingWords, centerX + 1, centerY - 3 );
+        ctx.fillText( remainingWords, centerX, centerY - 4 );
 
         // Draw troop count
         ctx.fillStyle = "white";
         ctx.font = "14px 'Segoe UI'";
         ctx.strokeStyle = "rgba(0,0,0,.25)";
         ctx.lineWidth = 1.25;
-        ctx.strokeText(t.troops, centerX + 1, centerY + 11);
-        ctx.fillText(t.troops, centerX, centerY + 10);
+        ctx.strokeText( t.troops, centerX + 1, centerY + 11 );
+        ctx.fillText( t.troops, centerX, centerY + 10 );
       } );
     },
     beginGame( sameTeams = false ) {
