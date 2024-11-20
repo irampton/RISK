@@ -44,6 +44,7 @@
     </div>
     <div style="text-align: center; width: 66%">
       <canvas id="gameCanvas" :width="canvasSize.width" :height="canvasSize.height" style="width: 95%"></canvas>
+      <ContinentStats :gameData="gameData" :continentColors="continentColors" :continents="continents" :teams="teams" />
       <br>
       <div style="display: flex; flex-direction: row; width: 100%; justify-content: space-between">
         <div style="width: 20%; padding-left: 50px">
@@ -90,7 +91,6 @@
         <div style="width: 20%"></div>
       </div>
       <br>
-      <br>
       AI Speed: <input type="text" v-model="AISpeed">
     </div>
   </div>
@@ -119,58 +119,61 @@ import { maps } from "@/maps/maps.js";
 import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_helper";
 import { getClickedPolygonIndex, drawPathFromPoints, calculatePolygonCenter } from "@/scripts/canvas_helper";
 import { defaultPersonalities, randomPersonality } from "@/scripts/AI_personalities.js";
+import ContinentStats from "@/components/continentStats.vue";
 
 let territories, territoryPolygons, continents, mapDecoration;
 
 export default {
   name: "RISK",
+  components: { ContinentStats },
   props: {},
   data() {
     return {
       territories,
+      continents,
       possibleTeams: [
-        { name: "Red", color: "rgba(255, 0, 0, 0.6)", enabled: true, player: false },
-        { name: "Light Red", color: "rgba(255, 64, 64, 0.6)", enabled: false, player: false },
-        { name: "Red-Orange", color: "rgba(255, 69, 0, 0.6)", enabled: false, player: false },
-        { name: "Orange", color: "rgba(255, 128, 0, 0.6)", enabled: true, player: false },
-        { name: "Dark Orange", color: "rgba(255, 140, 0, 0.6)", enabled: false, player: false },
-        { name: "Amber", color: "rgba(255, 191, 0, 0.6)", enabled: false, player: false },
-        { name: "Gold", color: "rgba(255, 215, 0, 0.6)", enabled: true, player: false },
-        { name: "Lime Green", color: "rgba(0, 255, 0, 0.6)", enabled: false, player: false },
-        { name: "Dark Green", color: "rgba(0, 204, 0, 0.6)", enabled: false, player: false },
-        { name: "Forest Green", color: "rgba(0, 128, 0, 0.6)", enabled: true, player: false },
-        { name: "Dark Forest Green", color: "rgba(34, 139, 34, 0.6)", enabled: false, player: false },
-        { name: "Spring Green", color: "rgba(0, 255, 127, 0.6)", enabled: false, player: false },
-        { name: "Medium Aquamarine", color: "rgba(102, 205, 170, 0.6)", enabled: false, player: false },
-        { name: "Cyan", color: "rgba(0, 255, 255, 0.6)", enabled: false, player: false },
-        { name: "Dark Cyan", color: "rgba(0, 204, 204, 0.6)", enabled: false, player: false },
-        { name: "Blue", color: "rgba(0, 102, 204, 0.6)", enabled: true, player: false },
-        { name: "Classic Blue", color: "rgba(0, 0, 255, 0.6)", enabled: false, player: false },
-        { name: "Deep Sky Blue", color: "rgba(0, 191, 255, 0.6)", enabled: false, player: false },
-        { name: "Indigo", color: "rgba(75, 0, 130, 0.6)", enabled: false, player: false },
-        { name: "Medium Slate Blue", color: "rgba(123, 104, 238, 0.6)", enabled: false, player: false },
-        { name: "Blue Violet", color: "rgba(138, 43, 226, 0.6)", enabled: false, player: false },
-        { name: "Purple", color: "rgba(128, 0, 128, 0.6)", enabled: true, player: false },
-        { name: "Dark Orchid", color: "rgba(153, 50, 204, 0.6)", enabled: false, player: false },
-        { name: "Plum", color: "rgba(221, 160, 221, 0.6)", enabled: false, player: false },
-        { name: "Violet", color: "rgba(238, 130, 238, 0.6)", enabled: false, player: false },
-        { name: "Hot Pink", color: "rgba(255, 105, 180, 0.6)", enabled: false, player: false },
-        { name: "Light Pink", color: "rgba(255, 182, 193, 0.6)", enabled: false, player: false },
-        { name: "Pink", color: "rgba(255, 192, 203, 0.6)", enabled: false, player: false },
-        { name: "Salmon", color: "rgba(250, 128, 114, 0.6)", enabled: false, player: false },
-        { name: "Lavender Blush", color: "rgba(255, 240, 245, 0.6)", enabled: false, player: false },
-        { name: "Misty Rose", color: "rgba(255, 228, 225, 0.6)", enabled: false, player: false },
-        { name: "Powder Blue", color: "rgba(176, 224, 230, 0.6)", enabled: false, player: false },
-        { name: "Orange (again)", color: "rgba(255, 165, 0, 0.6)", enabled: false, player: false },
-        { name: "Silver", color: "rgba(192, 192, 192, 0.6)", enabled: false, player: false },
-        { name: "Dark Gray", color: "rgba(169, 169, 169, 0.6)", enabled: false, player: false },
-        { name: "Charcoal", color: "rgba(64, 64, 64, 0.6)", enabled: false, player: false },
-        { name: "Deep Pink", color: "rgba(255, 20, 147, 0.6)", enabled: false, player: false },
-        { name: "Steel Blue", color: "rgba(70, 130, 180, 0.6)", enabled: false, player: false },
-        { name: "Turquoise", color: "rgba(64, 224, 208, 0.6)", enabled: false, player: false },
-        { name: "Peach", color: "rgba(255, 218, 185, 0.6)", enabled: false, player: false },
-        { name: "Honeydew", color: "rgba(240, 255, 240, 0.6)", enabled: false, player: false },
-        { name: "Coral", color: "rgba(255, 127, 80, 0.6)", enabled: false, player: false }
+        { name: "Red", color: "rgba(255, 0, 0, 1)", enabled: true, player: false },
+        { name: "Light Red", color: "rgba(255, 64, 64, 1)", enabled: false, player: false },
+        { name: "Red-Orange", color: "rgba(255, 69, 0, 1)", enabled: false, player: false },
+        { name: "Orange", color: "rgba(255, 128, 0, 1)", enabled: true, player: false },
+        { name: "Dark Orange", color: "rgba(255, 140, 0, 1)", enabled: false, player: false },
+        { name: "Amber", color: "rgba(255, 191, 0, 1)", enabled: false, player: false },
+        { name: "Gold", color: "rgba(255, 215, 0, 1)", enabled: true, player: false },
+        { name: "Lime Green", color: "rgba(0, 255, 0, 1)", enabled: false, player: false },
+        { name: "Dark Green", color: "rgba(0, 204, 0, 1)", enabled: false, player: false },
+        { name: "Forest Green", color: "rgba(0, 128, 0, 1)", enabled: true, player: false },
+        { name: "Dark Forest Green", color: "rgba(34, 139, 34, 1)", enabled: false, player: false },
+        { name: "Spring Green", color: "rgba(0, 255, 127, 1)", enabled: false, player: false },
+        { name: "Medium Aquamarine", color: "rgba(102, 205, 170, 1)", enabled: false, player: false },
+        { name: "Cyan", color: "rgba(0, 255, 255, 1)", enabled: false, player: false },
+        { name: "Dark Cyan", color: "rgba(0, 204, 204, 1)", enabled: false, player: false },
+        { name: "Blue", color: "rgba(0, 102, 204, 1)", enabled: true, player: false },
+        { name: "Classic Blue", color: "rgba(0, 0, 255, 1)", enabled: false, player: false },
+        { name: "Deep Sky Blue", color: "rgba(0, 191, 255, 1)", enabled: false, player: false },
+        { name: "Indigo", color: "rgba(75, 0, 130, 1)", enabled: false, player: false },
+        { name: "Medium Slate Blue", color: "rgba(123, 104, 238, 1)", enabled: false, player: false },
+        { name: "Blue Violet", color: "rgba(138, 43, 226, 1)", enabled: false, player: false },
+        { name: "Purple", color: "rgba(128, 0, 128, 1)", enabled: true, player: false },
+        { name: "Dark Orchid", color: "rgba(153, 50, 204, 1)", enabled: false, player: false },
+        { name: "Plum", color: "rgba(221, 160, 221, 1)", enabled: false, player: false },
+        { name: "Violet", color: "rgba(238, 130, 238, 1)", enabled: false, player: false },
+        { name: "Hot Pink", color: "rgba(255, 105, 180, 1)", enabled: false, player: false },
+        { name: "Light Pink", color: "rgba(255, 182, 193, 1)", enabled: false, player: false },
+        { name: "Pink", color: "rgba(255, 192, 203, 1)", enabled: false, player: false },
+        { name: "Salmon", color: "rgba(250, 128, 114, 1)", enabled: false, player: false },
+        { name: "Lavender Blush", color: "rgba(255, 240, 245, 1)", enabled: false, player: false },
+        { name: "Misty Rose", color: "rgba(255, 228, 225, 1)", enabled: false, player: false },
+        { name: "Powder Blue", color: "rgba(176, 224, 230, 1)", enabled: false, player: false },
+        { name: "Orange (again)", color: "rgba(255, 165, 0, 1)", enabled: false, player: false },
+        { name: "Silver", color: "rgba(192, 192, 192, 1)", enabled: false, player: false },
+        { name: "Dark Gray", color: "rgba(169, 169, 169, 1)", enabled: false, player: false },
+        { name: "Charcoal", color: "rgba(64, 64, 64, 1)", enabled: false, player: false },
+        { name: "Deep Pink", color: "rgba(255, 20, 147, 1)", enabled: false, player: false },
+        { name: "Steel Blue", color: "rgba(70, 130, 180, 1)", enabled: false, player: false },
+        { name: "Turquoise", color: "rgba(64, 224, 208, 1)", enabled: false, player: false },
+        { name: "Peach", color: "rgba(255, 218, 185, 1)", enabled: false, player: false },
+        { name: "Honeydew", color: "rgba(240, 255, 240, 1)", enabled: false, player: false },
+        { name: "Coral", color: "rgba(255, 127, 80, 1)", enabled: false, player: false }
       ],
       canvas: undefined,
       ctx: {},
@@ -218,7 +221,7 @@ export default {
       }) )
     },
     continentColors() {
-      return Object.fromEntries( (continents || []).map( ( c, i ) => [c.name, this.continentColorOrder[i % this.continentColorOrder.length]] ) );
+      return Object.fromEntries( (this.continents || []).map( ( c, i ) => [c.name, this.continentColorOrder[i % this.continentColorOrder.length]] ) );
     },
     territoryCenters(){
       return this.territories.map(t => calculatePolygonCenter(territoryPolygons[t.id]));
@@ -481,8 +484,11 @@ export default {
         drawPathFromPoints( ctx, territoryPolygons[t.id] );
         ctx.fillStyle = this.teams[t.owner]?.color || "white";
         ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,.8)";
+        ctx.lineWidth = 4;
+        ctx.stroke();
         ctx.strokeStyle = this.continentColors[territory.continent] || "black";
-        ctx.lineWidth = 1.25;
+        ctx.lineWidth = 1;
         ctx.stroke();
       } );
 
@@ -555,7 +561,7 @@ export default {
       //map setup
       this.territories = territories = maps[this.selectedMap].territories;
       territoryPolygons = maps[this.selectedMap].territoryPolygons;
-      continents = maps[this.selectedMap].continents;
+      this.continents = continents = maps[this.selectedMap].continents;
       mapDecoration = maps[this.selectedMap].mapDecoration;
       this.canvasSize.height = mapDecoration.height;
       this.canvasSize.width = mapDecoration.width;
