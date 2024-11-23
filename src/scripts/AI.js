@@ -85,7 +85,6 @@ function placeTroop( gameStateTerritories, territories, teamId, personality, fir
     }
 }
 
-
 function attack( gameStateTerritories, territories, teamId, personality, turnStats ) {
     const ownedTerritories = gameStateTerritories.filter( t => t.owner === teamId );
 

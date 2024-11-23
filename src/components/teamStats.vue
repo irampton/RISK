@@ -25,6 +25,16 @@
         </div>
       </div>
     </template>
+    <div class="block" style="background-color: #fff; color: #000; text-shadow: none; justify-content: space-between;">
+      <div style="width: 33%">
+      </div>
+      <div style="width: 33%;">
+        Round #{{ round }}
+      </div>
+      <div style="width: 33%">
+        Turn #{{ turn }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -63,6 +73,14 @@ export default {
       type: Object,
       required: true
     },
+    round: {
+      type: Number,
+      default: 0
+    },
+    turn: {
+      type: Number,
+      default: 0
+    }
   },
   computed: {
     teamsList() {

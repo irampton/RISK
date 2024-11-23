@@ -3,7 +3,8 @@
   <div style="display: flex; flex-direction: row">
     <div style="width: 33%; height: calc(100vh - 10rem)">
       <div v-if="['place', 'ready','play', 'end'].includes(gameState)">
-        <TeamStats :teams="teams" :gameData="gameData" :currentTeam="currentTeam" />
+        <TeamStats :teams="teams" :gameData="gameData" :currentTeam="currentTeam" :round="roundCounter"
+                   :turn="turnCounter" />
       </div>
       <div class="log">
         <div id="gameSettings" v-if="gameState === 'initial'">
@@ -119,9 +120,11 @@ canvas {
 <script>
 import { AI } from "@/scripts/AI.js";
 import { maps } from "@/maps/maps.js";
-import { randomizeTerritories, executeAttack, hasPath } from "@/scripts/game_helper";
+import { randomizeTerritories, executeAttack, hasPath, round } from "@/scripts/game_helper";
 import { getClickedPolygonIndex, drawPathFromPoints, calculatePolygonCenter } from "@/scripts/canvas_helper";
 import { defaultPersonalities, randomPersonality } from "@/scripts/AI_personalities.js";
+import { NewReinforcedAI } from '@/scripts/reinfocredAI.js';
+import { NewR_QRIM } from '@/scripts/R-QRIM';
 import ContinentStats from "@/components/continentStats.vue";
 import TeamStats from "@/components/teamStats.vue";
 
@@ -204,7 +207,15 @@ export default {
         width: 1000,
         height: 700
       },
-      continentColorOrder: ["yellow", "orange", "blue", "red", "forestgreen", "purple", "aqua", "coral", "lightgreen", "violet"]
+      continentColorOrder: ["yellow", "orange", "blue", "red", "forestgreen", "purple", "aqua", "coral", "lightgreen", "violet"],
+      trainingMode: true,
+      trainingInfo: {
+        aiWon: 0,
+        gamesPlayed: 0,
+        stage: 1
+      },
+      turnCounter: 1,
+      roundCounter: 1
     }
   },
   computed: {
@@ -243,7 +254,11 @@ export default {
           if ( this.freeTroopsLeft() ) {
             if ( !team.player ) {
               if ( team.freeTroops > 0 ) {
-                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality, true );
+                if ( team.AI ) {
+                  team.AI.place( this.gameData.territories, territories, this.teams.length, team.id );
+                } else {
+                  AI.placeTroop( this.gameData.territories, territories, team.id, team.personality, true );
+                }
                 team.freeTroops--;
               }
               this.drawMap();
@@ -268,6 +283,8 @@ export default {
           }
           break;
         case 'ready':
+          this.roundCounter = 1;
+          this.turnCounter = 1;
           this.gameState = 'play';
         case 'play':
           if ( !this.numberOfTerritories( this.currentTeam ) ) {
@@ -283,7 +300,11 @@ export default {
             if ( !team.player ) {
               //place phase
               while ( team.freeTroops > 0 ) {
-                AI.placeTroop( this.gameData.territories, territories, team.id, team.personality );
+                if ( team.AI ) {
+                  team.AI.place( this.gameData.territories, territories, this.teams.length, team.id );
+                } else if ( !this.trainingMode || this.trainingMode.stage >= 2 ) {
+                  AI.placeTroop( this.gameData.territories, territories, team.id, team.personality );
+                }
                 team.freeTroops--;
               }
               //attack phase
@@ -294,8 +315,10 @@ export default {
                 troopsKilled: 0
               };
               do {
-                let attack = AI.attack( this.gameData.territories, territories, team.id, team.personality, turnStats );
-                if ( attack.willAttack ) {
+                let attack = team.AI
+                    ? team.AI.attack( this.gameData.territories, territories, this.teams.length, team.id, this.roundCounter )
+                    : (!this.trainingMode || this.trainingMode.stage >= 3) && AI.attack( this.gameData.territories, territories, team.id, team.personality, turnStats );
+                if ( attack?.willAttack ) {
                   this.addToGameLog( this.currentTeam, `will attack ${territories[attack.attackTo].name} from ${territories[attack.attackFrom].name} with ${attack.troops} troops` );
                   let results = executeAttack( this.gameData.territories, attack );
                   turnStats.troopsLost += results.attackerLosses;
@@ -311,7 +334,11 @@ export default {
               } while ( attackAgain )
               this.addToGameLog( this.currentTeam, `will end their turn conquering ${turnStats.territoriesWon} territories, killing ${turnStats.troopsKilled} troops, and loosing ${turnStats.troopsLost} troops` );
               //move phase
-              AI.moveTroops( this.gameData.territories, territories, team.id, team.personality );
+              if ( team.AI ) {
+                team.AI.move( this.gameData.territories, territories, this.teams.length, team.id );
+              } else if ( !this.trainingMode || this.trainingMode.stage >= 2 ) {
+                AI.moveTroops( this.gameData.territories, territories, team.id, team.personality );
+              }
               this.drawMap();
               this.incrementTurn();
               setTimeout( this.nextTurn, this.AISpeed );
@@ -471,6 +498,13 @@ export default {
     },
     incrementTurn() {
       this.currentTeam = (this.currentTeam + 1) % this.teams.length;
+      this.turnCounter++;
+      if ( this.currentTeam === 0 ) {
+        this.roundCounter++;
+        if ( this.roundCounter >= 100 ) {
+          this.gameState = 'end';
+        }
+      }
     },
     drawMap() {
       const ctx = this.ctx;
@@ -539,6 +573,19 @@ export default {
       } );
     },
     beginGame( sameTeams = false ) {
+      this.currentTeam = 0;
+      this.gameLog = [];
+      this.roundCounter = 1;
+      this.turnCounter = 1;
+      //map setup
+      this.territories = territories = maps[this.selectedMap].territories;
+      territoryPolygons = maps[this.selectedMap].territoryPolygons;
+      this.continents = continents = maps[this.selectedMap].continents;
+      mapDecoration = maps[this.selectedMap].mapDecoration;
+      this.canvasSize.height = mapDecoration.height;
+      this.canvasSize.width = mapDecoration.width;
+      this.gameData.territories = territories.map( t => ({ id: t.id, owner: null, troops: 0 }) )
+
       //teams set up
       if ( sameTeams ) {
         this.teams = this.teams
@@ -559,21 +606,21 @@ export default {
               personality:
                   t.player
                       ? undefined
-                      : defaultPersonalities[t.name] || randomPersonality()
+                      : defaultPersonalities[t.name] || randomPersonality(),
+              AI: t.name === "Light Red" ?
+                  NewR_QRIM( t.name, territories )
+                  : undefined
             }) );
       }
-
-      //map setup
-      this.territories = territories = maps[this.selectedMap].territories;
-      territoryPolygons = maps[this.selectedMap].territoryPolygons;
-      this.continents = continents = maps[this.selectedMap].continents;
-      mapDecoration = maps[this.selectedMap].mapDecoration;
-      this.canvasSize.height = mapDecoration.height;
-      this.canvasSize.width = mapDecoration.width;
-      this.gameData.territories = territories.map( t => ({ id: t.id, owner: null, troops: 0 }) )
-
-      //console.log( JSON.parse( JSON.stringify( this.teams ) ) );
+      let aiTeam = this.teams.findIndex( t => t.name === "Light Red" );
+      console.log( JSON.parse( JSON.stringify( this.teams ) ) );
       randomizeTerritories( this.teams, this.gameData.territories );
+      this.gameData.territories.forEach( t => {
+        if ( Math.random() > .25 ) {
+          t.owner = aiTeam;
+        }
+      } )
+      //this.gameData.territories[Math.floor(Math.random() * 42)].owner = this.teams.findIndex( t => t.name !== "Light Red" );
       this.$nextTick( this.drawMap );
       this.teams.forEach( team => {
         team.freeTroops = this.startingTroops - this.gameData.territories
@@ -588,11 +635,77 @@ export default {
         this.gameState = 'initial';
       }
       this.gameLog = [];
+    },
+    logGame( aiResult ) {
+      let percentConquered = round( this.numberOfTerritories( aiResult.teamID ) / territories.length * 100 );
+      switch ( this.trainingInfo.stage ) {
+        case 1:
+        case 2:
+          let illegalRate = round( aiResult.illegalMoves / aiResult.totalMoves * 100, 10 );
+          let msg = aiResult.wonGame
+              ? `The AI conquered the world in ${this.roundCounter} rounds`
+              : `The AI failed to conquered the world in ${this.roundCounter} rounds (${percentConquered}%)`
+          console.log( `${msg}, and tried to make ${aiResult.illegalMoves} illegal moves. ( /${aiResult.totalMoves} - ${illegalRate}%)` );
+          console.log( `The AI has played ${this.trainingInfo.gamesPlayed} games total` );
+          break;
+        case 3:
+          console.log( `${this.trainingInfo.aiWon ? 'Won' : 'Lost'} a game in ${this.roundCounter} rounds with ${this.teams.length - 1} opponents. The AI tried to make ${aiResult.illegalMoves} illegal moves. \nPlayed ${this.trainingInfo.gamesPlayed} games total and the AI has won ${this.trainingInfo.aiWon} of them.` );
+          break;
+      }
     }
   },
   mounted() {
     this.canvas = document.getElementById( 'gameCanvas' );
     this.ctx = this.canvas.getContext( '2d' );
+  },
+  watch: {
+    gameState() {
+      if ( !this.trainingMode ) {
+        return;
+      }
+      switch ( this.gameState ) {
+        case 'place':
+          this.nextTurn();
+          break;
+        case 'ready':
+          this.nextTurn();
+          break;
+        case 'end':
+          this.trainingInfo.gamesPlayed++;
+          //save the model
+          let aiResult;
+          this.teams.forEach( t => {
+            if ( t.AI ) {
+              let wonGame = this.numberOfTerritories( t.id ) === territories.length;
+              if ( wonGame ) {
+                this.trainingInfo.aiWon++;
+                aiResult = t.AI.gameOver( true );
+              } else {
+                aiResult = t.AI.gameOver( false );
+              }
+              aiResult.teamID = t.id;
+              aiResult.wonGame = wonGame;
+              t.AI.saveModel();
+            }
+          } );
+          this.logGame( aiResult );
+          //set up next game
+          const teams = 2; //Math.floor( Math.random() * 2 ) + 2;
+          this.possibleTeams.forEach( ( t, i ) => {
+            //make sure the AI is on
+            if ( i === 1 ) {
+              t.enabled = true;
+            } else if ( i - 10 > 0 && i - 10 < teams ) {
+              t.enabled = true;
+            } else {
+              t.enabled = false;
+            }
+          } );
+          this.gameState = 'initial';
+          this.nextTurn();
+          break;
+      }
+    }
   }
 }
 </script>

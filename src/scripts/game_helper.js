@@ -100,3 +100,7 @@ export function hasPath( gameStateTerritories, territories, teamId, sourceId, ta
 
     return neighbors.some( neighborId => hasPath( gameStateTerritories, territories, teamId, neighborId, targetId, visited ) );
 }
+
+export function round(num, precision = 1){
+    return Math.floor(num * precision) / precision;
+}
